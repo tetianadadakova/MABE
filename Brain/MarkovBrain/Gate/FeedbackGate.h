@@ -25,6 +25,7 @@ class FeedbackGate : public AbstractGate {
 
   static bool feedbackON;
   static shared_ptr<ParameterLink<string>> IO_RangesPL;
+  static shared_ptr<ParameterLink<bool>> feedbackEnabledPL;
   
   vector<vector<double>> table;
   vector<vector<double>> originalTable;

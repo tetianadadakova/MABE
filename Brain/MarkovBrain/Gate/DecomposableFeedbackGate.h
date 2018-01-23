@@ -24,7 +24,10 @@ class DecomposableFeedbackGate : public AbstractGate {
   vector<double> appliedNegFB;
 
   static bool feedbackON;
+  static int feedbackType;
   static shared_ptr<ParameterLink<string>> IO_RangesPL;
+  static shared_ptr<ParameterLink<bool>> feedbackEnabledPL;
+  static shared_ptr<ParameterLink<int>> feedbackTypePL;
   
   vector<vector<double>> table;
   vector<vector<double>> originalTable;

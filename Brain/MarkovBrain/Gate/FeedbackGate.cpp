@@ -15,6 +15,7 @@
 
 bool FeedbackGate::feedbackON = true;
 shared_ptr<ParameterLink<string>> FeedbackGate::IO_RangesPL = Parameters::register_parameter("BRAIN_MARKOV_GATES_FEEDBACK-IO_Ranges", (string)"1-4,1-4", "range of number of inputs and outputs (min inputs-max inputs,min outputs-max outputs)");
+shared_ptr<ParameterLink<bool>> FeedbackGate::feedbackEnabledPL = Parameters::register_parameter("BRAIN_MARKOV_GATES_FEEDBACK-feedbackEnabled", true, "whether or not feedback is enabled");
 
 FeedbackGate::FeedbackGate(pair<vector<int>, vector<int>> addresses, 
         vector<vector<int>> rawTable, 
@@ -42,6 +43,8 @@ FeedbackGate::FeedbackGate(pair<vector<int>, vector<int>> addresses,
 
   int numInputs = inputs.size();
   int numOutputs = outputs.size();
+
+  feedbackON = feedbackEnabledPL->get(_PT);
 
   table.resize(1 << numInputs);
   //normalize each row

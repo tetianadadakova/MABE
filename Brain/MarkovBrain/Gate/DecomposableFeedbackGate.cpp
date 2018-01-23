@@ -16,7 +16,10 @@
 #include <bitset>
 
 bool DecomposableFeedbackGate::feedbackON = true;
+int DecomposableFeedbackGate::feedbackType = 1;
 shared_ptr<ParameterLink<string>> DecomposableFeedbackGate::IO_RangesPL = Parameters::register_parameter("BRAIN_MARKOV_GATES_DECOMPOSABLE_FEEDBACK-IO_Ranges", (string)"1-4,1-4", "range of number of inputs and outputs (min inputs-max inputs,min outputs-max outputs)");
+shared_ptr<ParameterLink<bool>> DecomposableFeedbackGate::feedbackEnabledPL = Parameters::register_parameter("BRAIN_MARKOV_GATES_DECOMPOSABLE_FEEDBACK-feedbackEnabled", true, "whether or not feedback is enabled");
+shared_ptr<ParameterLink<int>> DecomposableFeedbackGate::feedbackTypePL = Parameters::register_parameter("BRAIN_MARKOV_GATES_DECOMPOSABLE_FEEDBACK-feedbackType", 1, "which type of feedback to use. 1-single value adjustment, 2-all value adjustment");
 
 DecomposableFeedbackGate::DecomposableFeedbackGate(pair<vector<int>, vector<int>> addresses, 
         vector<vector<int>> rawTable, 
@@ -45,6 +48,9 @@ DecomposableFeedbackGate::DecomposableFeedbackGate(pair<vector<int>, vector<int>
 
   int numInputs = inputs.size();
   int numOutputs = outputs.size();
+
+  feedbackON = feedbackEnabledPL->get(_PT);
+  feedbackType = feedbackTypePL->get(_PT);
 
   table.resize(1 << numInputs);
   //normalize each row
@@ -79,74 +85,146 @@ void DecomposableFeedbackGate::update(vector<double> & states, vector<double> & 
 
   int numFactors(factors[0].size());
   int randomFactori(0);
-  /// positive feedback
-  /// NOTES: where is the chosen rowi,coli?
-  if ((feedbackON) && (nrPos != 0) && (states[posFBNode] > 0.0)) {
-      for (i = 0; i < chosenInPos.size(); i++) {
-          randomFactori = rand()%numFactors;
-          mod = Random::getDouble(1) * posLevelOfFB[i];
-          appliedPosFB.push_back(mod);
-          if (((chosenOutPos[i]>>randomFactori)&1) == 1) {
-              factors[chosenInPos[i]][randomFactori] += mod;
-          } else {
-              factors[chosenInPos[i]][randomFactori] -= mod;
-              factors[chosenInPos[i]][randomFactori] = max(factors[chosenInPos[i]][randomFactori],0.);
-          }
-          int rowi(chosenInPos[i]);
-          for (int outputi=0; outputi<table[rowi].size(); outputi++) {
-              double p(1.0);
-              bs=outputi;
-              /// loop through bits in each output and multiply
-              /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
-              for (int biti=0; biti<outs; biti++) {
-                  p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+  if (feedbackType==1) {
+      /// positive feedback
+      if ((feedbackON) && (nrPos != 0) && (states[posFBNode] > 0.0)) {
+          for (i = 0; i < chosenInPos.size(); i++) {
+              randomFactori = rand()%numFactors;
+              mod = Random::getDouble(1) * posLevelOfFB[i];
+              appliedPosFB.push_back(mod);
+              if (((chosenOutPos[i]>>randomFactori)&1) == 1) {
+                  factors[chosenInPos[i]][randomFactori] += mod;
+              } else {
+                  factors[chosenInPos[i]][randomFactori] -= mod;
+                  factors[chosenInPos[i]][randomFactori] = max(factors[chosenInPos[i]][randomFactori],0.001);
               }
-              table[rowi][outputi] = p;
+              int rowi(chosenInPos[i]);
+              for (int outputi=0; outputi<table[rowi].size(); outputi++) {
+                  double p(1.0);
+                  bs=outputi;
+                  /// loop through bits in each output and multiply
+                  /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
+                  for (int biti=0; biti<outs; biti++) {
+                      p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+                  }
+                  table[rowi][outputi] = p;
+              }
+              double rowSum( accumulate(begin(table[chosenInPos[i]]), end(table[chosenInPos[i]]), 0.) ); /// sum row
+              for (auto& number : table[chosenInPos[i]]) number /= rowSum; /// divide row by sum
+              //table[chosenInPos[i]][chosenOutPos[i]] += mod;
+              //double s = 0.0;
+              //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
+              //  s += table[chosenInPos[i]][k];
+              //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
+              //  table[chosenInPos[i]][k] /= s;
           }
-          double rowSum( accumulate(begin(table[chosenInPos[i]]), end(table[chosenInPos[i]]), 0.) ); /// sum row
-          for (auto& number : table[chosenInPos[i]]) number /= rowSum; /// divide row by sum
-          //table[chosenInPos[i]][chosenOutPos[i]] += mod;
-          //double s = 0.0;
-          //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
-          //  s += table[chosenInPos[i]][k];
-          //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
-          //  table[chosenInPos[i]][k] /= s;
       }
-  }
-    /// negative feedback
-  if ((feedbackON) && (nrNeg != 0) && (states[negFBNode] > 0.0)) {
-      for (i = 0; i < chosenInNeg.size(); i++) {
-          randomFactori = rand()%numFactors;
-          mod = Random::getDouble(1) * negLevelOfFB[i];
-          appliedNegFB.push_back(mod);
-          if (((chosenOutNeg[i]>>randomFactori)&1) == 1) {
-              factors[chosenInNeg[i]][randomFactori] -= mod;
-              factors[chosenInNeg[i]][randomFactori] = max(factors[chosenInNeg[i]][randomFactori],0.);
-          } else {
-              factors[chosenInNeg[i]][randomFactori] += mod;
-          }
-          int rowi(chosenInNeg[i]);
-          for (int outputi=0; outputi<table[rowi].size(); outputi++) {
-              double p(1.0);
-              bs=outputi;
-              /// loop through bits in each output and multiply
-              /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
-              for (int biti=0; biti<outs; biti++) {
-                  p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+      /// negative feedback
+      if ((feedbackON) && (nrNeg != 0) && (states[negFBNode] > 0.0)) {
+          for (i = 0; i < chosenInNeg.size(); i++) {
+              randomFactori = rand()%numFactors;
+              mod = Random::getDouble(1) * negLevelOfFB[i];
+              appliedNegFB.push_back(mod);
+              if (((chosenOutNeg[i]>>randomFactori)&1) == 1) {
+                  factors[chosenInNeg[i]][randomFactori] -= mod;
+                  factors[chosenInNeg[i]][randomFactori] = max(factors[chosenInNeg[i]][randomFactori],0.001);
+              } else {
+                  factors[chosenInNeg[i]][randomFactori] += mod;
               }
-              table[rowi][outputi] = p;
+              int rowi(chosenInNeg[i]);
+              for (int outputi=0; outputi<table[rowi].size(); outputi++) {
+                  double p(1.0);
+                  bs=outputi;
+                  /// loop through bits in each output and multiply
+                  /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
+                  for (int biti=0; biti<outs; biti++) {
+                      p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+                  }
+                  table[rowi][outputi] = p;
+              }
+              double rowSum( accumulate(begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), 0.) ); /// sum row
+              for (auto& number : table[chosenInNeg[i]]) number /= rowSum; /// divide row by sum
+              //transform( begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), begin(table[chosenInNeg[i]]), bind1st(divides<T>(), rowSum) ); /// divide row by sum
+              //table[chosenInNeg[i]][chosenOutNeg[i]] -= mod;
+              //if (table[chosenInNeg[i]][chosenOutNeg[i]] < 0.001)
+              //    table[chosenInNeg[i]][chosenOutNeg[i]] = 0.001;
+              //double s = 0.0;
+              //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
+              //    s += table[chosenInNeg[i]][k];
+              //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
+              //    table[chosenInNeg[i]][k] /= s;
           }
-          double rowSum( accumulate(begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), 0.) ); /// sum row
-          for (auto& number : table[chosenInNeg[i]]) number /= rowSum; /// divide row by sum
-          //transform( begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), begin(table[chosenInNeg[i]]), bind1st(divides<T>(), rowSum) ); /// divide row by sum
-          //table[chosenInNeg[i]][chosenOutNeg[i]] -= mod;
-          //if (table[chosenInNeg[i]][chosenOutNeg[i]] < 0.001)
-          //    table[chosenInNeg[i]][chosenOutNeg[i]] = 0.001;
-          //double s = 0.0;
-          //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
-          //    s += table[chosenInNeg[i]][k];
-          //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
-          //    table[chosenInNeg[i]][k] /= s;
+      }
+  } else { // feedbackType == 2
+      if ((feedbackON) && (nrPos != 0) && (states[posFBNode] > 0.0)) {
+          for (i = 0; i < chosenInPos.size(); i++) {
+              for (randomFactori=0; randomFactori<numFactors; randomFactori++) { // modify ALL the factors (just using same variable name as random case)
+                  mod = Random::getDouble(1) * posLevelOfFB[i];
+                  appliedPosFB.push_back(mod);
+                  if (((chosenOutPos[i]>>randomFactori)&1) == 1) {
+                      factors[chosenInPos[i]][randomFactori] += mod;
+                  } else {
+                      factors[chosenInPos[i]][randomFactori] -= mod;
+                      factors[chosenInPos[i]][randomFactori] = max(factors[chosenInPos[i]][randomFactori],0.001);
+                  }
+              }
+              int rowi(chosenInPos[i]);
+              for (int outputi=0; outputi<table[rowi].size(); outputi++) {
+                  double p(1.0);
+                  bs=outputi;
+                  /// loop through bits in each output and multiply
+                  /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
+                  for (int biti=0; biti<outs; biti++) {
+                      p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+                  }
+                  table[rowi][outputi] = p;
+              }
+              double rowSum( accumulate(begin(table[chosenInPos[i]]), end(table[chosenInPos[i]]), 0.) ); /// sum row
+              for (auto& number : table[chosenInPos[i]]) number /= rowSum; /// divide row by sum
+              //table[chosenInPos[i]][chosenOutPos[i]] += mod;
+              //double s = 0.0;
+              //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
+              //  s += table[chosenInPos[i]][k];
+              //for (size_t k = 0; k < table[chosenInPos[i]].size(); k++)
+              //  table[chosenInPos[i]][k] /= s;
+          }
+      }
+      /// negative feedback
+      if ((feedbackON) && (nrNeg != 0) && (states[negFBNode] > 0.0)) {
+          for (i = 0; i < chosenInNeg.size(); i++) {
+              for (randomFactori=0; randomFactori<numFactors; randomFactori++) { // modify ALL the factors (just using same variable name as random case)
+                  mod = Random::getDouble(1) * negLevelOfFB[i];
+                  appliedNegFB.push_back(mod);
+                  if (((chosenOutNeg[i]>>randomFactori)&1) == 1) {
+                      factors[chosenInNeg[i]][randomFactori] -= mod;
+                      factors[chosenInNeg[i]][randomFactori] = max(factors[chosenInNeg[i]][randomFactori],0.001);
+                  } else {
+                      factors[chosenInNeg[i]][randomFactori] += mod;
+                  }
+              }
+              int rowi(chosenInNeg[i]);
+              for (int outputi=0; outputi<table[rowi].size(); outputi++) {
+                  double p(1.0);
+                  bs=outputi;
+                  /// loop through bits in each output and multiply
+                  /// the appropriate factors together in the right way (1-p) for bit=0 vs p for bit=1
+                  for (int biti=0; biti<outs; biti++) {
+                      p *= (bs[biti] ? factors[rowi][biti] : 1-factors[rowi][biti]);
+                  }
+                  table[rowi][outputi] = p;
+              }
+              double rowSum( accumulate(begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), 0.) ); /// sum row
+              for (auto& number : table[chosenInNeg[i]]) number /= rowSum; /// divide row by sum
+              //transform( begin(table[chosenInNeg[i]]), end(table[chosenInNeg[i]]), begin(table[chosenInNeg[i]]), bind1st(divides<T>(), rowSum) ); /// divide row by sum
+              //table[chosenInNeg[i]][chosenOutNeg[i]] -= mod;
+              //if (table[chosenInNeg[i]][chosenOutNeg[i]] < 0.001)
+              //    table[chosenInNeg[i]][chosenOutNeg[i]] = 0.001;
+              //double s = 0.0;
+              //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
+              //    s += table[chosenInNeg[i]][k];
+              //for (size_t k = 0; k < table[chosenInNeg[i]].size(); k++)
+              //    table[chosenInNeg[i]][k] /= s;
+          }
       }
   }
 
