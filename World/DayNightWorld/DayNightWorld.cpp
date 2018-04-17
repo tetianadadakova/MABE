@@ -117,7 +117,7 @@ void DayNightWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyse,
                   : startWithDay;
 
   for (auto i = 0; i < evaluationsPerGeneration; i++) {
-    auto score = EvalInMode(org->brain, analyse, visualize, debug, mode);
+    auto score = EvalInMode(org->brains[brainNamePL->get(PT)], analyse, visualize, debug, mode);
     org->dataMap.append("score", score);
   }
  // org->dataMap.setOutputBehavior("score", DataMap::AVE + DataMap::VAR);

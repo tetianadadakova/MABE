@@ -99,8 +99,8 @@ void Analyzer::knockoutExperiment(
 
     //	now yank the MarkovBrain out of the organism
     //	safe-ish because of the check above
-    auto mb =
-        std::make_shared<MarkovBrain>(dynamic_cast<MarkovBrain &>(*org->brain));
+    auto mb = std::make_shared<MarkovBrain>(
+        dynamic_cast<MarkovBrain &>(*org->brains["root::"]));
 
     // for every brain with a single gate knockout
     for (auto b : mb->getAllSingleGateKnockouts()) {
@@ -109,7 +109,7 @@ void Analyzer::knockoutExperiment(
       auto mutant = org->makeCopy(Parameters::root);
 
       // wrap the brain in this organism
-      mutant->brain = b;
+      mutant->brains["root::"] = b;
 
       // wrap the organism in a population
       std::vector<shared_ptr<Organism>> mutated_population = {mutant};
@@ -223,18 +223,17 @@ void Analyzer::stateTransition(
   for (auto org : population) {
 
     // set up IO recording
-    org->brain->setRecordActivity(true);
+    org->brains["root::"]->setRecordActivity(true);
 
 	// yank out the MarkovBrain
-    auto mb =
-        std::make_shared<MarkovBrain>(dynamic_cast<MarkovBrain &>(*org->brain));
-
+    auto mb = std::make_shared<MarkovBrain>(
+        dynamic_cast<MarkovBrain &>(*org->brains["root::"]));
 
     // make a shell organism
     auto mutant = org->makeCopy(Parameters::root);
 
     // wrap the brain in this organism
-    mutant->brain = mb;
+    mutant->brains["root::"] = mb;
 
     // make a population containg just this org
     std::vector<shared_ptr<Organism>> mutated_population = {mutant};
@@ -266,7 +265,7 @@ void Analyzer::stateTransition(
       // We don't need to wrap it up in a shared_ptr since we only want
       // to look at it locally
       auto mb_wh = dynamic_cast<MarkovBrain &>(
-          *mutated_groups["root::"]->population[0]->brain);
+          *mutated_groups["root::"]->population[0]->brains["root::"]);
 
       // structure of nodes in a MarkovBrain
       auto in = mb_wh.nrInputValues;   // from AbstractBrain
