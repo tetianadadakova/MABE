@@ -80,25 +80,10 @@ SimpleOptimizer::SimpleOptimizer(std::shared_ptr<ParametersTable> PT_)
   elitismRangeMT = stringToMTree(elitismRangePL->get(PT));
   nextPopSizeMT = stringToMTree(nextPopSizePL->get(PT));
 
-  cullBelow = cullBelowPL->get(PT); // -1 or [0,1] orgs who ((opVal - min) / (max - min)) < cullBelow are culled before selection
+  cullBelow = cullBelowPL->get(PT); // [0,1] orgs who ((opVal - min) / (max - min)) < cullBelow are culled before selection
 									// culled orgs will not be automatically not be allowed to survive
-									// if -1 (default) then cullBelowScore = 0
-  cullRemap = cullRemapPL->get(PT); // -1 or [0,1] scores will be normalized between min and cullBelowScore score and then adjusted
+  cullRemap = cullRemapPL->get(PT); // [0,1] scores will be normalized between min and cullBelowScore score and then adjusted
 									// such that min score is the value
-									// if -1, no normalization will occur
-
-  /*
-  if (cullBelow < 0.f || cullBelow > 1.f) {
-	  std::cout << "  in SimpleOptimizer constructor, found cullBelow value "
-		  << cullBelow << " but cullBelow must be either -1 or in the range [0,1].\n  exiting." << std::endl;
-	  exit(1);
-  }
-  if (cullRemap != -1 && !(cullRemap >= 0 && cullRemap <= 1.0)) {
-	  std::cout << "  in SimpleOptimizer constructor, found cullRemap value "
-		  << cullRemap << " but cullRemap must be either -1 or in the range [0,1].\n  exiting." << std::endl;
-	  exit(1);
-  }
-  */
 
   cullByRange = cullByRangePL->get(PT);;
   
@@ -144,10 +129,8 @@ void SimpleOptimizer::optimize(std::vector<std::shared_ptr<Organism>> &populatio
   eliteCount = 0;
   surviveCount = 0;
 
-  aveScore = 0;
   maxScore = optimizeValueMT->eval(population[0]->dataMap, PT)[0];
   minScore = maxScore;
-  auto scoresHaveDelta = false;
 
   double deltaScore; // maxScore - cullBelow
   
@@ -160,22 +143,20 @@ void SimpleOptimizer::optimize(std::vector<std::shared_ptr<Organism>> &populatio
   scores.clear();
   killList.clear();
 
-  // get all scores
-  for (size_t i = 0; i < population.size(); i++) {
-	  double opVal = optimizeValueMT->eval(population[i]->dataMap, PT)[0];
-	  scores.push_back(opVal);
-	  aveScore += opVal;
-	  population[i]->dataMap.set("optimizeValue", opVal);
-	  if (opVal > maxScore) {
-		  maxScore = opVal;
-		  scoresHaveDelta = true;
-	  }
-	  if (opVal < minScore) {
-		  minScore = opVal;
-		  scoresHaveDelta = true;
-	  }
+  // get all scores and update dataMap
+  for (auto org : population) {
+    auto opVal = optimizeValueMT->eval(org->dataMap, PT)[0];
+    org->dataMap.set("optimizeValue", opVal);
+    scores.push_back(opVal);
   }
-  aveScore /= oldPopulationSize;
+
+  auto const aveScore =
+      std::accumulate(std::begin(scores), std::end(scores), 0.f) /
+      oldPopulationSize;
+
+  auto const scoresHaveDelta =
+      std::max_element(std::begin(scores), std::end(scores)) >
+      std::min_element(std::begin(scores), std::end(scores));
 
   if (cullBelow >= 0.f && cullBelow <= 1.f &&
       scoresHaveDelta) { // cull and normalize scores if min == max then all

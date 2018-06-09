@@ -63,7 +63,7 @@ public:
   double cullRemap;
   bool cullByRange;
 
-  double aveScore;
+  //double aveScore;
   double maxScore;
   double culledMaxScore;
   double minScore;
