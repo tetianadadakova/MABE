@@ -61,7 +61,7 @@ Parameters::register_parameter(
 	"if cullBelow is being used (not -1) then remap scores between cullRemap and 1.0 so that the minimum score in the culled population is remapped to cullRemap and the high score is remapped to 1.0\nThe effect will be that the lowest score after culling will have a cullRemap % chance to kept if selected using the Roulette selection method");
 
 std::shared_ptr<ParameterLink<bool>> SimpleOptimizer::cullByRangePL =
-Parameters::register_parameter("OPTIMIZER_SIMPLE-cullRangeByRange", false,
+Parameters::register_parameter("OPTIMIZER_SIMPLE-cullByRange", false,
 	"if true cull will be relative to min and max score"
 	"\n  i.e. cull organisms with score less then (((maxScore - minScore) * cullBelow) + minScore)"
 	"\nif false, cull will be relative to organism ranks"
