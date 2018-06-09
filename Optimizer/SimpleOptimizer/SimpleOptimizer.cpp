@@ -54,11 +54,11 @@ std::shared_ptr<ParameterLink<std::string>> SimpleOptimizer::nextPopSizePL =
 std::shared_ptr<ParameterLink<double>> SimpleOptimizer::cullBelowPL =
 Parameters::register_parameter(
 	"OPTIMIZER_SIMPLE-cullBelow", -1.0,
-	"cull organisms with score less then (((maxScore - minScore) * cullBelow) + minScore)\nif -1, no culling.");
+	"cull organisms with score less then (((maxScore - minScore) * cullBelow) + minScore)\nculling effect only if within range [0.0,1.0]");
 std::shared_ptr<ParameterLink<double>> SimpleOptimizer::cullRemapPL =
 Parameters::register_parameter(
 	"OPTIMIZER_SIMPLE-cullRemap", -1.0,
-	"if cullBelow is being used (not -1) then remap scores between cullRemap and 1.0 so that the minimum score in the culled population is remapped to cullRemap and the high score is remapped to 1.0\nThe effect will be that the lowest score after culling will have a cullRemap % chance to kept if selected using the Roulette selection method");
+	"remap scores between cullRemap and 1.0 so that the minimum score in the culled population is remapped to cullRemap and the high score is remapped to 1.0\nculling effect only if within range [0.0,1.0]\nThe effect will be that the lowest score after culling will have a cullRemap probability to be kept if selected using the Roulette selection method");
 
 std::shared_ptr<ParameterLink<bool>> SimpleOptimizer::cullByRangePL =
 Parameters::register_parameter("OPTIMIZER_SIMPLE-cullByRange", false,
@@ -87,7 +87,8 @@ SimpleOptimizer::SimpleOptimizer(std::shared_ptr<ParametersTable> PT_)
 									// such that min score is the value
 									// if -1, no normalization will occur
 
-  if (cullBelow != -1 && !(cullBelow >= 0 && cullBelow <= 1.0)) {
+  /*
+  if (cullBelow < 0.f || cullBelow > 1.f) {
 	  std::cout << "  in SimpleOptimizer constructor, found cullBelow value "
 		  << cullBelow << " but cullBelow must be either -1 or in the range [0,1].\n  exiting." << std::endl;
 	  exit(1);
@@ -97,6 +98,7 @@ SimpleOptimizer::SimpleOptimizer(std::shared_ptr<ParametersTable> PT_)
 		  << cullRemap << " but cullRemap must be either -1 or in the range [0,1].\n  exiting." << std::endl;
 	  exit(1);
   }
+  */
 
   cullByRange = cullByRangePL->get(PT);;
   
@@ -111,9 +113,6 @@ SimpleOptimizer::SimpleOptimizer(std::shared_ptr<ParametersTable> PT_)
   }
 
   selectorArgs[1].pop_back();
-  // cout << "SimpleOptimizer method: " << selectorArgs[0] << "  " <<
-  // selectorArgs[1] << endl;
-  // cout << selectorArgs.size() << endl;
   if (selectorArgs[0] == "Tournament") {
     selector = std::make_shared<TournamentSelector>(selectorArgs[1], this);
   } else if (selectorArgs[0] == "Roulette") {
@@ -162,7 +161,6 @@ void SimpleOptimizer::optimize(std::vector<std::shared_ptr<Organism>> &populatio
   killList.clear();
 
   // get all scores
-
   for (size_t i = 0; i < population.size(); i++) {
 	  double opVal = optimizeValueMT->eval(population[i]->dataMap, PT)[0];
 	  scores.push_back(opVal);
@@ -178,66 +176,57 @@ void SimpleOptimizer::optimize(std::vector<std::shared_ptr<Organism>> &populatio
 	  }
   }
   aveScore /= oldPopulationSize;
-  
-  if (cullBelow > -.5 && scoresHaveDelta){ // cull and normalize scores if min == max then all scores are the same, do nothing!
-	culledMinScore = maxScore;
-	culledMaxScore = maxScore;
-	auto culledScoresHaveDetla = false;
-	if (cullByRange) {
-		cullBelowScore = minScore + ((maxScore - minScore) * cullBelow);
-	} else { // cull not by range, but by rank position
-		auto sortedScores = scores;
-        auto cull_index = cullBelow * sortedScores.size() - 1;
-        std::nth_element(std::begin(sortedScores),
+
+  if (cullBelow >= 0.f && cullBelow <= 1.f &&
+      scoresHaveDelta) { // cull and normalize scores if min == max then all
+                         // scores are the same, do nothing!
+    culledMinScore = maxScore;
+    culledMaxScore = maxScore;
+    auto culledScoresHaveDetla = false;
+    if (cullByRange) {
+      cullBelowScore = minScore + ((maxScore - minScore) * cullBelow);
+    } else { // cull not by range, but by rank position
+      auto sortedScores = scores;
+      auto cull_index = cullBelow * sortedScores.size() - 1;
+      std::nth_element(std::begin(sortedScores),
                        std::begin(sortedScores) + cull_index,
                        std::end(sortedScores));
-        cullBelowScore = sortedScores[cull_index];
-		
-		/* uncomment to see all scores
-		for (auto ss : sortedScores) {
-			std::cout << ss << " ";
-		}
-		std::cout << std::endl;
-		*/
-
-	}
-	deltaScore = maxScore - cullBelowScore;
-	//std::cout << "\n\nmax: " << maxScore << "   min: " << minScore;
-	//std::cout << "  cullBelowScore: " << cullBelowScore << "  deltaScore: " << deltaScore << std::endl;
-	for (size_t i = 0; i < population.size(); i++) {
-		//std::cout << scores[i];
-		if (scores[i] >= cullBelowScore) { // if not culled, add to culledPopulation
-			populationAfterCull.push_back(population[i]);
-			scoresAfterCull.push_back(scores[i]);
-			if (scores[i] < culledMinScore) {
-				culledMinScore = scores[i];
-				culledScoresHaveDetla = true;
-			}
-			//std::cout << " ->  " << scoresAfterCull.back() << "   min: " << culledMinScore;
-		}
-		else { // if culled, add to kill list and DO NOT add to culled population
-			killList.insert(population[i]);
-			//std::cout << " ->  culled";
-		}
-		//std::cout << std::endl;
-	}
-	culledPopulationSize = static_cast<int>(populationAfterCull.size());
-	if ((cullRemap > -.5) && (culledScoresHaveDetla)) { // normaization
-		for (int i = 0; i < culledPopulationSize; i++) {
-			//std::cout << "  remap: " << scoresAfterCull[i] << " ";
-			scoresAfterCull[i] = (((scoresAfterCull[i] - culledMinScore) / (culledMaxScore - culledMinScore)) * (1.0 - cullRemap)) + cullRemap;
-			//std::cout << scoresAfterCull[i] << std::endl;
-		}
-		culledMaxScore = 1; // all scores will be between 0 and 1
-		culledMinScore = 0;
-	}
-  }
-  else { // if not culling, don't worry, we are using population and scores as is.
-	  populationAfterCull = population;
-	  culledPopulationSize = oldPopulationSize;
-	  scoresAfterCull = scores;
-	  culledMinScore = minScore;
-	  culledMaxScore = maxScore;
+      cullBelowScore = sortedScores[cull_index];
+    }
+    deltaScore = maxScore - cullBelowScore;
+    for (size_t i = 0; i < population.size(); i++) {
+      if (scores[i] >=
+          cullBelowScore) { // if not culled, add to culledPopulation
+        populationAfterCull.push_back(population[i]);
+        scoresAfterCull.push_back(scores[i]);
+        if (scores[i] < culledMinScore) {
+          culledMinScore = scores[i];
+          culledScoresHaveDetla = true;
+        }
+      } else { // if culled, add to kill list and DO NOT add to culled
+               // population
+        killList.insert(population[i]);
+      }
+    }
+    culledPopulationSize = static_cast<int>(populationAfterCull.size());
+    if (cullRemap >= 0.f && cullRemap <= 1.f &&
+        (culledScoresHaveDetla)) { // normaization
+      for (int i = 0; i < culledPopulationSize; i++) {
+        scoresAfterCull[i] = (((scoresAfterCull[i] - culledMinScore) /
+                               (culledMaxScore - culledMinScore)) *
+                              (1.0 - cullRemap)) +
+                             cullRemap;
+      }
+      culledMaxScore = 1; // all scores will be between 0 and 1
+      culledMinScore = 0;
+    }
+  } else { // if not culling, don't worry, we are using population and scores as
+           // is.
+    populationAfterCull = population;
+    culledPopulationSize = oldPopulationSize;
+    scoresAfterCull = scores;
+    culledMinScore = minScore;
+    culledMaxScore = maxScore;
   }
 
   // figure out if an orgs survive
@@ -258,17 +247,6 @@ void SimpleOptimizer::optimize(std::vector<std::shared_ptr<Organism>> &populatio
     elites.push_back(findGreatestInVector(tempScores));
     tempScores[elites.back()] = culledMinScore;
   }
-
-  /*
-  for (auto p : population) {
-          cout << optimizeValueMT->eval(p->dataMap, PT)[0] << ", ";
-  }
-  cout << endl;
-  for (auto elite : elites) {
-          cout << population[elite]->ID << ":" <<
-  optimizeValueMT->eval(population[elite]->dataMap, PT)[0] << "  ..." << endl;
-  }
-  */
 
   // first add elitism offspring for each of the best elitismRange organisms
   // (assuming there is room)
