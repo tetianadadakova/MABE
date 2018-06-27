@@ -29,6 +29,10 @@ shared_ptr<ParameterLink<int>> BitBrain::nrOfGateInsPL =
   Parameters::register_parameter("BRAIN_BIT-nrOfGateIns",
                                  2,
                                  "number of inputs each gate has");
+shared_ptr<ParameterLink<string>> BitBrain::gateTrackingSetPL =
+  Parameters::register_parameter("BRAIN_BIT-gateTrackingSet",
+                                 (string) "-1",
+                                 "list of output nodes that will be recursively tested for gate usage. -1 signals no tracking");
 
 BitBrain::BitBrain(int nrInNodes,
                    int nrOutNodes,
@@ -41,6 +45,10 @@ BitBrain::BitBrain(int nrInNodes,
   H = nrOfHiddenNodesPL->get(PT);
   I = nrInNodes;
   O = nrOutNodes;
+  auto gateTrackingSetString = gateTrackingSetPL->get(PT);
+  if (gateTrackingSetString != "-1"){
+    gateTrackingSet = seq(gateTrackingSetString, I + O + H);
+  }
 }
 
 shared_ptr<AbstractBrain>
@@ -68,11 +76,59 @@ BitBrain::makeBrain(unordered_map<string, shared_ptr<AbstractGenome>>& genomes)
 
     for (int j = 0; j < (I + O + H); j++) {
       newBrain->gates[i][j] =
-        make_shared<Gate>(genomeHandler, I + O + H, nrOfGateIns);
+        make_shared<Gate>(genomeHandler, I + O + H, nrOfGateIns, i, j);
     }
   }
+  //cout << I + O + H << endl;
+  newBrain->markGatesUsed();
   return newBrain;
 }
+
+
+void
+BitBrain::markGateUsed(shared_ptr<Gate> gate)
+{
+  if (! gate->used){
+    //cout << "unvisited gate " << gate->node << " in layer " << gate->layer << endl;
+    gate->used = true;
+    if (gate->layer > 0){
+      //cout << "Recursing up a layer..." << endl;
+      for (auto nodeID:gate->ins){
+        //cout << "Visiting node " << nodeID << " as a child of " << gate->node << endl;
+        markGateUsed(gates[gate->layer -1][nodeID]);
+        //cout << "Returned from recursing on gate " << nodeID << endl;
+      }
+    }
+    else{
+      for (auto nodeID:gate->ins){
+        if (nodeID >= I+O){
+          //cout << "Hidden node " << nodeID << " in layer 0 is a child of gate " << gate->node << ". Recursing on hidden node " << nodeID << " at output layer..." << endl;
+          markGateUsed(gates[gates.size() -1][nodeID]);
+        }
+      }
+    }
+  }
+}
+
+
+void
+BitBrain::markGatesUsed()
+{
+  if (!gateTrackingSet.empty()){
+    for (auto nodeID:gateTrackingSet){
+      markGateUsed(gates[gates.size() -1][nodeID]);
+      //cout << "Returned from recursing on gate " << nodeID << endl;
+    }
+  }
+  else{
+    for (auto gateLayer:gates){
+      for (auto gate:gateLayer){
+        gate->used = true; 
+      }
+    }
+  }
+}
+
 
 void
 BitBrain::resetBrain()
@@ -146,11 +202,13 @@ BitBrain::reportComponents()
   //1<<(1<<nrOfGateIns))+1 = (2^(2^x))+1
   for (int i = 0; i < nrOfLayers + 1; i++){
     for (auto gate:gates[i]){
-      int logicID = 0;
-      for (int j = 0; j < gate->output.size(); j++){
-        logicID += gate->output[j] << j; 
+      if (gate->used){
+        int logicID = 0;
+        for (int j = 0; j < gate->output.size(); j++){
+          logicID += gate->output[j] << j; 
+        }
+        retrn[logicID]++;
       }
-      retrn[logicID]++;
     }
   }
   return retrn;

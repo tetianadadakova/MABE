@@ -35,9 +35,14 @@ public:
   public:
     vector<int> ins;
     vector<int> output;
+    bool used = false;
+    int layer;
+    int node;
 
-    Gate(shared_ptr<AbstractGenome::Handler> handler, int range, int nrOfIns)
+    Gate(shared_ptr<AbstractGenome::Handler> handler, int range, int nrOfIns, int layr, int nod)
     {
+      layer = layr;
+      node = nod;
       for (int i = 0; i < nrOfIns; i++) {
         ins.push_back(handler->readInt(0, range - 1));
       }
@@ -57,7 +62,12 @@ public:
       return output[theI];
     }
   };
-
+  
+  void markGatesUsed();
+  void markGateUsed(shared_ptr<Gate> gate);
+  vector<int> gateTrackingSet;
+  
+  static shared_ptr<ParameterLink<string>> gateTrackingSetPL;   
   static shared_ptr<ParameterLink<string>> genomeNamePL;
   static shared_ptr<ParameterLink<int>> nrOfHiddenNodesPL;
   static shared_ptr<ParameterLink<int>> nrOfLayersPL;
