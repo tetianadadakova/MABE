@@ -3,71 +3,86 @@
 
 #pragma once
 
-#include <string>
 #include <map>
+#include <regex>
+#include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <set>
-#include <regex>
 
+// implements the functionality specified in
+// https://github.com/Hintzelab/MABE/wiki/Population-Loading
+//
 class Loader {
 
 public:
-
+  // public method returns a vector of pairs
+  // each pair is a long (where a value < 1 indicates whether that this is a
+  // random organim, and a positive number indicates it is actually loaded from
+  // file) and a map of (attribute-value) pairs for the particular organism
   std::vector<std::pair<long, std::unordered_map<std::string, std::string>>>
   loadPopulation(const std::string &);
 
 private:
-  struct organism { // all of the organisms info pulled from organisms_files and
-                    // data_files
+  // helper struct that stores all of the organisms info pulled from
+  // organisms_files and data_files
+  struct organism {
     std::unordered_map<std::string, std::string> attributes;
-    // long ID;	// not used, since ID is known from position in all_organisms
-    std::string from_file;  // name of organism file this org was pulled from
-    long orig_ID; // ID in the original file
-    bool has_corresponding_data_file;
+    std::string
+        from_file; // name of organism file this organism was pulled from
+    long orig_ID;  // ID in the original file
   };
+
   std::vector<organism> all_organisms; // literally
 
-  const std::string tk_name = "__TK42PL__"; // (invisibly) reserved token names for temporaries
+  // (invisibly) reserved token names for temporaries
   // this needs a unique name guarantee - enforced
   // by requiring user names to NOT begin with __
-  long tk_counter;           // used to create unique temporary token names
+  const std::string tk_name = "__TK42PL__";
 
-  std::vector<std::string>
-      all_possible_file_names; // literally (see constructor)
+  // used to create unique temporary token names
+  long tk_counter;
+
+  //  std::vector<std::string>
+  //      all_possible_file_names; // literally (see constructor)
 
   std::map<std::string, std::vector<std::vector<long>>>
-      collection_org_lists; // list of orgs in each population of the collection
+      collection_org_lists; // key: collection name (user-defined or
+                            // temporary token) - value: list of orgs in
+                            // each population of the collection
 
-  // 	methods
+  // *** 	methods   *** 
 
+  // load population specified in a .plf file
   std::string loadFromFile(const std::string &);
-  
-  std::vector<std::string>
-      expandFiles(const std::string &);// for user inputted wildcards
-  std::pair<long, long>
-      generatePopulation(const std::string &);
-  // read MABE generated files and constructs organsims 
-  // redundant function from MABE - should be cleaned
-  //
-//  std::map<long, std::map<std::string, std::string>> getAttributeMap(
-//      const std::string &); // read file and construct partial organism
 
-  void parseAllCommands(
-      std::string); // read file and parse every assignment to user
-                    // defined variable
-  std::vector<std::vector<long>> parseExpression(
-      std::string); // unpack and parse entire user-defined expression
+  // expand user inputted wildcards into list
+  // of all matching filenames
+  std::vector<std::string> expandFiles(const std::string &);
+
+  std::pair<long, long> generatePopulation(const std::string &);
+
+  // parse all assignments of collection-expressions to user-defined variables
+  void parseAllCommands(std::string);
+
+  // unpack and parse entire collection-expression
+  std::vector<std::vector<long>> parseExpression(std::string);
+
+  // parse single collection
   std::vector<std::vector<long>>
-      parseCollection(const std::string &); // parse single user defined collection
+  parseCollection(const std::string &);
 
-  std::string
-  cleanLines(std::ifstream &); // clean comments and check for invalid syntax
+  // clean comments and check for invalid syntax
+  std::string cleanLines(std::ifstream &);
+
+  // a level of indirection so that all possible files the user might
+  // need are parsed exactly once
   std::string findAndGenerateAllFiles(std::string all_lines);
-  // a level of indirection so that all possible files the user might need are
-  // read exactly once
-  bool balancedBraces(std::string); // simple syntactic check to avoid issues
-                                     // when deep inside an evaluation
+
+  // simple syntactic check for nexted braces to avoid parsing issues
+  bool balancedBraces(std::string);
+
+  // for interactive screen display
   void showFinalPopulation(std::vector<long>);
 
   // methods for all keywords
@@ -75,7 +90,7 @@ private:
   std::vector<std::vector<long>> keywordRandom(long number);
   std::vector<std::vector<long>> keywordDefault(long number);
   std::vector<std::vector<long>> keywordGreatest(size_t, std::string,
-                                                 const  std::string &);
+                                                 const std::string &);
   std::vector<std::vector<long>> keywordLeast(size_t, std::string,
                                               const std::string &);
   std::vector<std::vector<long>> keywordAny(size_t, const std::string &);
@@ -83,5 +98,9 @@ private:
   std::vector<std::vector<long>> keywordMatch(std::string, std::string,
                                               const std::string &);
 
-  void printOrganism(long); // strictly to debug all_organisms entries
+  // make sure user-defined variable names actually exist  
+  void checkTokenExistence(const std::string &);
+
+  // strictly to debug all_organisms entries
+  void printOrganism(long);
 };

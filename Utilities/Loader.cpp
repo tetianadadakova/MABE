@@ -2,8 +2,8 @@
 // Loader.cpp contains implementation of population loading scripting language
 
 #include "Loader.h"
-#include "Filesystem.h"
 #include "CSV.h"
+#include "Filesystem.h"
 
 #include <fstream>
 #include <iostream>
@@ -16,14 +16,15 @@
 #include <unordered_map>
 #include <vector>
 
-std::string dataVersionOfFilename(const std::string& filename) {
-    std::string ext(filename.substr(filename.rfind(".")));
-    int orgposIfExist = filename.rfind("organisms");
-    if (orgposIfExist != -1) return filename.substr(0,orgposIfExist)+"data"+filename.substr(orgposIfExist+9);
-    else return filename.substr(0,filename.rfind("."))+"_data"+ext;
+std::string dataVersionOfFilename(const std::string &filename) {
+  std::string ext(filename.substr(filename.rfind(".")));
+  int orgposIfExist = filename.rfind("organisms");
+  if (orgposIfExist != -1)
+    return filename.substr(0, orgposIfExist) + "data" +
+           filename.substr(orgposIfExist + 9);
+  else
+    return filename.substr(0, filename.rfind(".")) + "_data" + ext;
 }
-
-
 
 std::string Loader::loadFromFile(const std::string &loader_file_name) {
   std::ifstream flines(loader_file_name);
@@ -34,50 +35,56 @@ std::string Loader::loadFromFile(const std::string &loader_file_name) {
               << std::endl;
     exit(1);
   }
-
   std::cout << "Creating population from " << loader_file_name << "\n";
-
   return cleanLines(flines);
 }
 
+// load population specified in settings.cfg
 std::vector<std::pair<long, std::unordered_map<std::string, std::string>>>
 Loader::loadPopulation(const std::string &loader_option) {
 
-  tk_counter = 0;
-
   static const std::regex plf_file(R"(.*\.plf)");
+  auto all_lines =
+      std::regex_match(loader_option, plf_file)
+          ? loadFromFile(loader_option) // if config specifies a .plf file
+          : loader_option;              // else config has in-place .plf syntax
 
-  auto all_lines = std::regex_match(loader_option, plf_file)
-                       ? loadFromFile(loader_option)
-                       : loader_option;
-
+  // replace all filenames (expanded or otherwise) with temporary tokens
   all_lines = findAndGenerateAllFiles(all_lines);
+
+  tk_counter = 0; // initialize temporary token counter
 
   parseAllCommands(all_lines);
 
+  // .plf must contain a variable called MASTER
   if (collection_org_lists.find("MASTER") == collection_org_lists.end()) {
     std::cout << "error: Must load from variable named MASTER" << std::endl;
     exit(1);
   }
+  // and it must be a collection with exactly 1 population
   if (collection_org_lists.at("MASTER").size() != 1) {
-    std::cout << "error: variable named MASTER must contain exactly one population"
-              << std::endl;
+    std::cout
+        << "error: variable named MASTER must contain exactly one population"
+        << std::endl;
     exit(1);
   }
 
-  std::vector<std::pair<long, std::unordered_map<std::string, std::string>>>
-      final_population; // needs to be constructed
-
+  // store the final population of organisms
   auto final_orgs = collection_org_lists.at("MASTER")[0];
 
+  // inform the user which organisms have been loaded
   showFinalPopulation(final_orgs);
 
+  // convert the organims attributes into a form palatable? to main.cpp
+  std::vector<std::pair<long, std::unordered_map<std::string, std::string>>>
+      final_population;
   std::transform(
       final_orgs.begin(), final_orgs.end(),
       std::back_inserter(final_population), [this](long org) {
-        return org < 0
+        return org < 0 // default organism
                    ? make_pair(org,
                                std::unordered_map<std::string, std::string>())
+                   // loaded organism
                    : make_pair(org, all_organisms.at(org).attributes);
       });
 
@@ -108,11 +115,9 @@ void Loader::showFinalPopulation(std::vector<long> orgs) {
 }
 
 void Loader::parseAllCommands(std::string all_lines) {
-  // split into commands. These are all collection-assignments
-  static const std::regex command(
-      R"((?:(\w+)\s*=)(.*?)(?=(?:(?:\w+\s*=))|$))");
-  // match
-  // one of the collection-assignmenta\s but don't capture
+  // split into commands. These are all collection to variable assignments
+  static const std::regex command(R"((?:(\w+)\s*=)(.*?)(?=(?:(?:\w+\s*=))|$))");
+  // match one of the collection-assignments but don't capture
   // lookahead for another collection-assignment (without capturing) or end of
   // line
   for (std::sregex_iterator end,
@@ -126,8 +131,10 @@ void Loader::parseAllCommands(std::string all_lines) {
 }
 
 std::string Loader::cleanLines(std::ifstream &flines) {
-  // read lines, strip out all trailing comments, and create one long string.
+
   std::string all_lines = " ", line;
+
+  // read lines, strip out all trailing comments, and create one long string.
   static const std::regex comments("#.*");
   while (getline(flines, line)) {
     if (!line.empty()) {
@@ -136,8 +143,8 @@ std::string Loader::cleanLines(std::ifstream &flines) {
     }
   }
 
-  static const std::regex garbage(R"(^\s*\w+\s*=.*$)");
   // check that file must start with an assignment
+  static const std::regex garbage(R"(^\s*\w+\s*=.*$)");
   if (!std::regex_match(all_lines, garbage)) {
     std::cout << " error : Loader file contains unrezognized text at beginning "
               << std::endl;
@@ -148,96 +155,120 @@ std::string Loader::cleanLines(std::ifstream &flines) {
 
 std::string Loader::findAndGenerateAllFiles(std::string all_lines) {
 
-  std::map<std::string, std::vector<std::string>>
-      collection_of_files;            // all file names for a collection
-  std::set<std::string> actual_files; // every file the user might refer to
+  // stores all file names that correspond to each collection
+  std::map<std::string, std::vector<std::string>> collection_of_files;
+  // every file the user might refer to
+  std::set<std::string> actual_files;
+
   // get all file names . These must all be in single-qoutes and can be
   // wildcarded
   static const std::regex quoted_files("'([^']*)'");
   std::smatch m;
-  while (std::regex_search(
-      all_lines, m,
-      quoted_files)) { // replace quoted file names with temporary token name
-    std::string new_tk =
-        tk_name + std::to_string(tk_counter++); // creating new token
+  while (std::regex_search(all_lines, m, quoted_files)) {
+    // create a new token, and bump the token counter
+    std::string new_tk = tk_name + std::to_string(tk_counter++);
+    // replace quoted file names with temporary token name
     all_lines = m.prefix().str() + " " + new_tk + " " + m.suffix().str();
-    auto exp_files = expandFiles(m[1].str()); // expand the filename
-    collection_of_files[new_tk] =
-        exp_files; //  update list of files assoc with collection name
-    actual_files.insert(exp_files.begin(),
-                        exp_files.end()); // add files to global file list
+    // expand the filename in case there are wildcards
+    auto exp_files = expandFiles(m[1].str());
+    //  update the local list of files associated with collection name
+    collection_of_files[new_tk] = exp_files;
+    // add list of files to global file list
+    actual_files.insert(exp_files.begin(), exp_files.end());
   }
 
+  // simple map from filename -> (start index of org in all_organisms, number of
+  // sequential organisms from start) efficiently keeps track of organisms
   std::map<std::string, std::pair<long, long>> file_contents;
-  // filename -> (start index of org in all_organisms, number of sequential
-  // organisms from start)
 
-  for (const auto &file :
-       actual_files) { // load all populations from file ONCE.
-    // this creates a SINGLE list of organisms that can be efficiently accessed
-    // should be done in parallel
+  // each file is read once and each organism from every file is
+  // assigned a unique ID
+  // this creates a SINGLE list of organisms that can be efficiently accessed
+  for (const auto &file : actual_files) {
     std::cout << "Parsing file " << file << "..." << std::endl;
     file_contents[file] = generatePopulation(file);
   }
 
   // create all collections from file names
-  for (const auto &cf : collection_of_files) {
-    for (const auto &f : cf.second) {
-      std::vector<long> sinf(file_contents.at(f).second);
-      std::iota(sinf.begin(), sinf.end(), file_contents.at(f).first);
-      collection_org_lists[cf.first].push_back(sinf);
+  // Note: collections internally only hold on to the unique index
+  for (const auto &files : collection_of_files) {
+    for (const auto &file : files.second) {
+      // create all indices within the range generated for this file
+      std::vector<long> sinf(file_contents.at(file).second);
+      std::iota(sinf.begin(), sinf.end(), file_contents.at(file).first);
+      // add this collection(indices) to global list
+      collection_org_lists[files.first].push_back(sinf);
     }
   }
+  // returns .plf script with all filenames removed
   return all_lines;
 }
 
+// implements a recursive parser, that stores sub-expressions in a stack, and
+// evaluates them bottom-up
 std::vector<std::vector<long>> Loader::parseExpression(std::string expr) {
 
+  // a simple linear time check for balanced braces. Strictly speaking not
+  // necessary, but it's a very cheap check that gives a much better error
+  // message, than if caught during parsing
   if (!balancedBraces(expr)) {
     std::cout << " Expression " << expr << " does not have balanced braces "
               << std::endl;
     exit(1);
   }
 
-  expr = "{" + expr + "}"; // makes the top of local stack evaluate to the
-                           // correct expression
+  // make the top of local stack evaluate to the correct expression
+  expr = "{" + expr + "}";
 
+  // stores all sub-expressions into temporary tokens
   std::vector<std::pair<std::string, std::string>> local_tk_stack;
+  // match lowest-level (non-decomposable) sub-expression
   static const std::regex braces(R"(\{([^\{\}]*)\})");
   std::smatch m;
-  while (std::regex_search(expr, m, braces)) { // resolve braced by ...
-    std::string new_tk =
-        tk_name + std::to_string(tk_counter++); // creating new token
-    local_tk_stack.emplace_back(new_tk, m[1].str()); // adding token to local stack of tokens
+  // for each nested sub-expression - resolve braces ...
+  while (std::regex_search(expr, m, braces)) {
+    // create a new token, and bump token counter
+    std::string new_tk = tk_name + std::to_string(tk_counter++);
+    // add token to local stack of tokens
+    local_tk_stack.emplace_back(new_tk, m[1].str());
+    // replace braced sub-expression with token
     expr = m.prefix().str() + " " + new_tk + " " + m.suffix().str();
-    // replacing brace sub-expr with token
-  } // repeat for all braces ..
+  } // repeat for all braces ...
 
   // evaluate tokens in local stack
+  // each sub-expression in a collection is separated by a :
   static const std::regex colon_sep(R"((.+?)(?:\:|$))");
   for (const auto &tk : local_tk_stack) {
+    // collection that needs to be filled
     std::vector<std::vector<long>> coll;
+    // expression corresponding to the token
     std::string tkn = tk.second;
+    //	evaluate each sub expression
     for (std::sregex_iterator end,
          i = std::sregex_iterator(tkn.begin(), tkn.end(), colon_sep);
-         i != end; i++) { //	evaluate each sub expression
+         i != end; i++) {
+      // extract the expression text
       std::smatch sub_expr = *i;
       std::string token = sub_expr[1].str();
+      // remove syntactic whitespace
       token.erase(std::remove_if(token.begin(), token.end(), ::isspace),
                   token.end());
       auto p = collection_org_lists.find(token) != collection_org_lists.end()
-                   ? collection_org_lists[token]
-                   : // expression is already evaluated collection
-                   parseCollection(
-                       sub_expr[1].str()); // expression needs to be parsed
-
+                   ? // if sub-expression is already evaluated (e.g. repeated
+                     // filename)
+                   collection_org_lists[token]
+                   : // else it needs to be parsed
+                   parseCollection(sub_expr[1].str());
+      // insert the population corresponding to the expression into the
+      // collection
       coll.insert(coll.end(), p.begin(), p.end());
     }
-    collection_org_lists[tk.first] =
-        coll; // add population to global collections
+    // add the collection on the stack to global collections list
+    collection_org_lists[tk.first] = coll;
   }
 
-  // return population  at top of stack
+  // return collection at top of stack - this must be the complete RHS
+  // expression from a user-defined variable assignment
   return collection_org_lists[local_tk_stack.back().first];
 } // end  Loader::parseExpression
 
@@ -259,8 +290,8 @@ bool Loader::balancedBraces(std::string s) {
 
 std::vector<std::vector<long>>
 Loader::parseCollection(const std::string &expr) {
-  // semantics of collection choosing
 
+  // each sub-expression can have one of the following keyword commands
   {
     static const std::regex command_collapse(R"(^\s*collapse\s+(\w+)\s*$)");
     std::smatch match;
@@ -316,8 +347,7 @@ Loader::parseCollection(const std::string &expr) {
   }
 
   {
-    static const std::regex command_duplicate(
-        R"(^\s*(\d+)\s*\*\s*(\w+)\s*$)");
+    static const std::regex command_duplicate(R"(^\s*(\d+)\s*\*\s*(\w+)\s*$)");
     std::smatch match;
     if (std::regex_match(expr, match, command_duplicate))
       return keywordDuplicate(stoul(match[1].str()), match[2].str());
@@ -330,34 +360,34 @@ Loader::parseCollection(const std::string &expr) {
 
 } // end Loader::parse_token
 
+void Loader::checkTokenExistence(const std::string &token_name) {
+  if (collection_org_lists.find(token_name) == collection_org_lists.end()) {
+    std::cout << "Unrecognised token " << token_name << std::endl;
+    exit(1);
+  }
+}
 std::vector<std::vector<long>>
 Loader::keywordDuplicate(size_t value, const std::string &resource) {
 
-  std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(resource) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << resource << std::endl;
-    exit(1);
-  }
+  checkTokenExistence(resource);
 
-  for (const auto &p : collection_org_lists[resource]) {
-    const auto &from_pop = p;
+  std::vector<std::vector<long>> coll;
+  // make 'value' number of copies for each population in the collection
+  for (const auto &pop : collection_org_lists[resource]) {
     auto num = value;
     while (num--)
-      coll.push_back(from_pop);
+      coll.push_back(pop);
   }
   return coll;
 }
 
-std::vector<std::vector<long>> Loader::keywordMatch(std::string attribute,
-                                                    std::string value,
-                                                    const std::string &resource) {
+std::vector<std::vector<long>>
+Loader::keywordMatch(std::string attribute, std::string value,
+                     const std::string &resource) {
+
+  checkTokenExistence(resource);
 
   std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(resource) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << resource << std::endl;
-    exit(1);
-  }
-
   for (const auto &p : collection_org_lists.at(resource)) {
     const auto from_pop = p;
     for (const auto &o : from_pop)
@@ -382,12 +412,10 @@ std::vector<std::vector<long>> Loader::keywordMatch(std::string attribute,
 std::vector<std::vector<long>>
 Loader::keywordGreatest(size_t number, std::string attribute,
                         const std::string &resource) {
-  std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(resource) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << resource << std::endl;
-    exit(1);
-  }
 
+  checkTokenExistence(resource);
+
+  std::vector<std::vector<long>> coll;
   for (const auto &p : collection_org_lists.at(resource)) {
     const auto from_pop = p;
     if (from_pop.size() < number) {
@@ -421,11 +449,10 @@ Loader::keywordGreatest(size_t number, std::string attribute,
 std::vector<std::vector<long>>
 Loader::keywordLeast(size_t number, std::string attribute,
                      const std::string &resource) {
+
+  checkTokenExistence(resource);
+
   std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(resource) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << resource << std::endl;
-    exit(1);
-  }
 
   for (const auto &p : collection_org_lists.at(resource)) {
     const auto from_pop = p;
@@ -459,12 +486,9 @@ Loader::keywordLeast(size_t number, std::string attribute,
 
 std::vector<std::vector<long>> Loader::keywordAny(size_t number,
                                                   const std::string &resource) {
-  std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(resource) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << resource << std::endl;
-    exit(1);
-  }
+  checkTokenExistence(resource);
 
+  std::vector<std::vector<long>> coll;
   for (const auto &p : collection_org_lists.at(resource)) {
     auto from_pop = p;
     if (from_pop.size() < number) {
@@ -474,7 +498,7 @@ std::vector<std::vector<long>> Loader::keywordAny(size_t number,
                 << " organisms" << std::endl;
       exit(1);
     }
-	// Latent bug - not reproducible randomness :(
+    // Latent bug - not reproducible randomness :(
     std::shuffle(from_pop.begin(), from_pop.end(), std::random_device());
     std::vector<long> pop(from_pop.begin(), from_pop.begin() + number);
     coll.push_back(pop);
@@ -483,20 +507,20 @@ std::vector<std::vector<long>> Loader::keywordAny(size_t number,
 }
 
 std::vector<std::vector<long>>
-Loader::keywordCollapse(const std::string &name) {
+Loader::keywordCollapse(const std::string &resource) {
+
+  checkTokenExistence(resource);
   std::vector<std::vector<long>> coll;
-  if (collection_org_lists.find(name) == collection_org_lists.end()) {
-    std::cout << "Unrecognised token " << name << std::endl;
-    exit(1);
-  }
   std::vector<long> pop;
-  for (const auto &c : collection_org_lists.at(name)) {
+  for (const auto &c : collection_org_lists.at(resource)) {
     pop.insert(pop.end(), c.begin(), c.end());
   }
   coll.push_back(pop);
   return coll;
 }
 
+// these 2 functions are intended to have different semantics, but may not be
+// distinguished by main.cpp
 std::vector<std::vector<long>> Loader::keywordRandom(long number) {
   std::vector<std::vector<long>> coll;
   std::vector<long> pop(number, -1);
@@ -511,13 +535,15 @@ std::vector<std::vector<long>> Loader::keywordDefault(long number) {
   return coll;
 }
 
-std::vector<std::string> Loader::expandFiles(const std::string &f) {
+std::vector<std::string> Loader::expandFiles(const std::string &file) {
 
+  //	store file names after wildcard expansion
   std::vector<std::string> result;
-  getFilesMatchingRelativePattern(f, result);
+  // expand wildcards
+  getFilesMatchingRelativePattern(file, result);
 
   if (result.empty()) {
-    std::cout << " error: " << f << " does not match any files" << std::endl;
+    std::cout << " error: " << file << " does not match any files" << std::endl;
     exit(1);
   }
   return result;
@@ -525,29 +551,42 @@ std::vector<std::string> Loader::expandFiles(const std::string &f) {
 
 std::pair<long, long> Loader::generatePopulation(const std::string &file_name) {
 
+  // store organism file in memory-mapped CSV
   auto org_file_data = CSV(file_name);
-  auto file_contents_pair =
-      std::make_pair(long(all_organisms.size()), long(org_file_data.row_count()));
+  // setup the range of indices needed to identify all organisms from this file
+  auto file_contents_pair = std::make_pair(long(all_organisms.size()),
+                                           long(org_file_data.row_count()));
 
+  /*
   static const std::regex valid_org_name(R"((.*)_organisms(_\d+)?.csv$)");
   std::smatch match_org;
   std::regex_match(file_name, match_org, valid_org_name);
   //auto data_file_name = std::regex_replace(file_name, valid_org_name,
   //                                         match_org[1].str() + "_data" +
   //                                             match_org[2].str() + ".csv");
+*/
+  //  std::map<long, std::map<std::string, std::string>> data_file_data;
 
-//  std::map<long, std::map<std::string, std::string>> data_file_data;
+  // search for the _data version of the organism file
   std::string data_file_name(dataVersionOfFilename(file_name));
   if (fileExists(data_file_name)) {
-	  auto data_file_data = CSV(data_file_name);
-	  org_file_data.merge(data_file_data,"ID");
+    // store _data file in memory_mapped CSV
+    auto data_file_data = CSV(data_file_name);
+    // merge the _data file data into the organism file data
+    org_file_data.merge(data_file_data, "ID");
   }
 
+  // for each ID in the organism+_data data
   for (auto const &id : org_file_data.singleColumn("ID")) {
+    // create an internal organism
     organism org;
+    // store the unique ID
     org.orig_ID = std::stol(id);
+    // store the orginal file from which it was pulled
     org.from_file = file_name;
+    // stick all the attributes into the organism
     for (const auto &attribute : org_file_data.columns()) {
+      // making sure to use the per-file-unique-ID
       org.attributes.insert(
           make_pair(attribute, org_file_data.lookUp("ID", id, attribute)));
     }
@@ -644,8 +683,11 @@ Loader::getAttributeMap(const std::string &file_name) {
   return result;
 } // end Loader::getAttributeMap
 */
+
+
 void Loader::printOrganism(long i) {
 
+  // strictly for debugging purposes 
   if (i != -1)
     std::cout << "\tID: " << all_organisms.at(i).orig_ID << " from file "
               << all_organisms.at(i).from_file << std::endl;
