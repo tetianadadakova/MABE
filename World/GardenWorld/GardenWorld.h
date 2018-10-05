@@ -27,9 +27,11 @@ public:
   //////////// PARAMETERS ///////////
 
   // Overall Parameters
+  static std::shared_ptr<ParameterLink<int>> evaluationsPerGenerationPL;
   static std::shared_ptr<ParameterLink<int>> gardenSizePL;
   static std::shared_ptr<ParameterLink<int>> maxPopPL;
   static std::shared_ptr<ParameterLink<int>> maxGenPL;
+  int evaluationsPerGeneration;
   int gardenSize;
   int maxPop;
   int maxGen; 
@@ -104,9 +106,39 @@ public:
 
   ////////// MAP VARIABLES //////////
   
-  const char dirt = 'd', food1 = 'f', food2 = 'g', toy = 't', rock = 'r', org = 'o';
+  const char dirt = 'd', food1 = 'f', food2 = 'g', rock = 'r', toy = 't', org = 'o';
+
+  ////////// INPUT/OUTPUT NODES ////////
+
+  // Input Nodes
   
+  //// Senses
   
+  const int numObjects = 6;
+  const int nodeDirt = 0;
+  const int nodeFood1 = 1;
+  const int nodeFood2 = 2;
+  const int nodeRock = 3;
+  const int nodeToy = 4;
+  const int nodeOrg = 5;
+
+  //// Drives
+  
+  const int numDrives = 4;
+  const int nodeAmusement = 6;
+  const int nodeDesire = 7;
+  const int nodeFullness = 8;
+  const int nodePain = 9;
+ 
+  // Output Nodes
+  const int nodeForward = 0;
+  const int nodeLeft = 1;
+  const int nodeRight = 2;
+  const int nodeEat = 3;
+  const int nodePlay = 4;
+  const int nodeMate = 5; 
+
+
   ////////// WORLD FUNCTIONS ////////
   
   std::pair <Vector2d<char> , std::vector<Point2d> > initializeMapAndLocations(int gardenSize, double pctRock, double pctToy, double pctFood1, double pctFood2);

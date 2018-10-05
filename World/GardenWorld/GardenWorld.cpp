@@ -20,6 +20,10 @@
 
 // WORLD_GARDEN parameters
 
+std::shared_ptr<ParameterLink<int>> GardenWorld::evaluationsPerGenerationPL = 
+    Parameters::register_parameter("WORLD_GARDEN-evaluationsPerGeneration", 10,
+                                   "Number of evaluations per generation.");
+
 std::shared_ptr<ParameterLink<int>> GardenWorld::gardenSizePL =
     Parameters::register_parameter("WORLD_GARDEN-gardenSize", 13,
                                    "Height and width of the world.");
@@ -49,7 +53,7 @@ std::shared_ptr<ParameterLink<double>> GardenWorld::valFood1PL =
                                    "Starting nutritional value of food1 [0 to 1.0].");
 
 std::shared_ptr<ParameterLink<double>> GardenWorld::valFood2PL =
-    Parameters::register_parameter("WORLD_GARDEN_FOOD-food2", 0.3,
+    Parameters::register_parameter("WORLD_GARDEN_FOOD-valfood2", 0.3,
                                    "Starting nutritional value of food2 [0 to 1.0].");
 
 // WORLD_GARDEN_OBJECTS parameters
@@ -100,12 +104,6 @@ std::shared_ptr<ParameterLink<std::string>> GardenWorld::brainNamePL =
                                    (std::string) "root::",
                                    "namespace for parameters used to define brain");
 
-////////////////////////// WORLD VARIABLES ///////////////////////////
-
-//int GardenWorld::dx[4];
-//int GardenWorld::dy[4];
-//char GardenWorld::dirt, GardenWorld::food1, GardenWorld::food2, GardenWorld::toy, GardenWorld::rock, GardenWorld::org;
-
 
 ////////////////////////// WORLD FUNCTIONS ///////////////////////////
 
@@ -115,6 +113,7 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
     : AbstractWorld(PT_) {
 
   // Localize parameters
+  evaluationsPerGeneration = evaluationsPerGenerationPL->get(PT);
   gardenSize = gardenSizePL->get(PT);
   maxPop = maxPopPL->get(PT);
   maxGen = maxGenPL->get(PT);
@@ -258,55 +257,108 @@ std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2
 // Evaluation Functions
 void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int visualize, int debug) {
   
-  // Specify brain
-  auto brain = org->brains[brainNamePL->get(PT)];
-  
-  brain->resetBrain(); 
-  brain->setInput(0, 1); // give the brain a constant 1 (for wire brain)
-  brain->update();
-  
-  double score = 0.0;
-
-  // Initialize the garden map and the available locations
+  // Initialize the garden map and the available locations 
   std::pair< Vector2d<char> , std::vector<Point2d> > gardenMapAndLocations = initializeMapAndLocations(gardenSize, pctRock, pctToy, pctFood1, pctFood2);
   Vector2d<char> gardenMap = gardenMapAndLocations.first;
   std::vector<Point2d> availableLocations = gardenMapAndLocations.second;
-  
   //std::vector< std::vector<int> > organismLocations = initializeOrganismLocations(&gardenMap, &availableLocations, org, orgPopSize);
-
-  ////// TESTING: START ALL ORGANISMS AT 0,0 FACING RIGHT
-
-  // Directions
-  Point2d orgPosition;
-  int orgFacing = 0;
-  orgPosition.x = 0;
-  orgPosition.y = 0;
-
-  orgPosition.x += dx[orgFacing];
-  orgPosition.y += dy[orgFacing];
-
-  // Wrap arounds
-  if (orgPosition.x > gardenSize - 1) {
-      orgPosition.x = 0;
-  } else if (orgPosition.x < 0) {
-      orgPosition.x = gardenSize - 1;
-  } 
-
-  if (orgPosition.y > gardenSize - 1) {
-      orgPosition.y = 0; 
-  } else if (orgPosition.y < 0) {
-      orgPosition.y = gardenSize - 1;
-  } 
-
-  if (gardenMap(orgPosition.x, orgPosition.y) == food1 || gardenMap(orgPosition.x, orgPosition.y) == food2) {
-    gardenMap(orgPosition.x, orgPosition.y) == dirt;
-    score += 1.0;
-  } 
-
-  org->dataMap.append("score", score);
-
-  if (visualize) {
-    std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
-    }
   
+  
+
+  // Specify brain
+  auto brain = org->brains[brainNamePL->get(PT)];
+ 
+  int numBrainoutputs = brain->nrOutputValues;
+
+  Point2d orgPosition(0,0);
+  int orgFacing = 0;
+  
+  // Get x and y coordinates of the point in front of the organism 
+  Point2d orgFront(orgPosition.x + dx[orgFacing], orgposition.y + dy[orgFacing]);
+  
+  for (int r = 0; r < evaluationsPerGeneration; r++) {
+    
+    brain->resetBrain();
+    
+    for (int node = 0; node < numObjects; node++) {
+        brain->setInput(node, 0); 
+    }
+    
+    
+    // Set input node based on what the item at orgFront is
+    
+    int nodeInput;
+
+    switch(gardenMap(orgFront.x, orgFront.y)) {
+        case dirt: nodeInput = nodeDirt; break;
+        case food1: nodeInput = nodeFood1; break;
+        case food2: nodeInput = nodeFood2; break;
+        case rock: nodeInput = nodeRock; break;
+        case toy: nodeInput = nodeToy; break;
+        case org: nodeInput = nodeOrg; break;
+
+    }
+
+    // TODO: Amusement, Desire, Fullness, Pain drive updates
+    // Amusement, Fullness, Pain should go down over time
+    // Desire should modulate on its own
+    //
+    // For now, for tests, increase the organism's score if fullness is > 75.0
+
+    brain->setInput(nodeInput, 1); 
+
+    brain->update();
+    
+    double score = 0.0;
+
+    // TODO: Figure out how to get the maximum value of the brain outputs
+
+    nodeMax = nodeEat;
+    // Determine action based upon the highest scoring output node
+    
+    switch (nodeMax) {
+        case nodeForward: 
+            orgPosition.x += dx[orgFacing];
+            orgPosition.y += dy[orgFacing];
+            break;
+        case nodeLeft:
+            orgFacing--;
+            break;
+        case nodeRight:
+            orgFacing++;
+            break;
+        case nodeEat: //TODO: Edit so their fullness goes up
+            score += 1.0;
+            break;
+        case nodePlay: //TODO: Edit so their amusement goes up
+            break;
+        case nodeMate: //TODO: a whole bunch of shit
+            score += 0.5;
+            break;
+    }
+    
+    // Wrap arounds
+    if (orgPosition.x > gardenSize - 1) {
+        orgPosition.x = 0;
+    } else if (orgPosition.x < 0) {
+        orgPosition.x = gardenSize - 1;
+    } 
+
+    if (orgPosition.y > gardenSize - 1) {
+        orgPosition.y = 0; 
+    } else if (orgPosition.y < 0) {
+        orgPosition.y = gardenSize - 1;
+    } 
+
+    if (gardenMap(orgPosition.x, orgPosition.y) == food1 || gardenMap(orgPosition.x, orgPosition.y) == food2) {
+        gardenMap(orgPosition.x, orgPosition.y) == dirt;
+        score += 1.0;
+    } 
+
+    org->dataMap.append("score", score);
+
+    if (visualize) {
+        std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
+    }
+  }
 }
