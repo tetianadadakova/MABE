@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <thread>
 #include <vector>
+#include <iterator>
 
 class GardenWorld : public AbstractWorld {
 
@@ -106,7 +107,7 @@ public:
 
   ////////// MAP VARIABLES //////////
   
-  const char dirt = 'd', food1 = 'f', food2 = 'g', rock = 'r', toy = 't', org = 'o';
+  static const char charDirt = 'd', charFood1 = 'f', charFood2 = 'g', charRock = 'r', charToy = 't', charOrg = 'o';
 
   ////////// INPUT/OUTPUT NODES ////////
 
@@ -114,13 +115,13 @@ public:
   
   //// Senses
   
-  const int numObjects = 6;
-  const int nodeDirt = 0;
-  const int nodeFood1 = 1;
-  const int nodeFood2 = 2;
-  const int nodeRock = 3;
-  const int nodeToy = 4;
-  const int nodeOrg = 5;
+  static const int numObjects = 6;
+  static const int nodeDirt = 0;
+  static const int nodeFood1 = 1;
+  static const int nodeFood2 = 2;
+  static const int nodeRock = 3;
+  static const int nodeToy = 4;
+  static const int nodeOrg = 5;
 
   //// Drives
   
@@ -131,12 +132,12 @@ public:
   const int nodePain = 9;
  
   // Output Nodes
-  const int nodeForward = 0;
-  const int nodeLeft = 1;
-  const int nodeRight = 2;
-  const int nodeEat = 3;
-  const int nodePlay = 4;
-  const int nodeMate = 5; 
+  static const int nodeForward = 0;
+  static const int nodeLeft = 1;
+  static const int nodeRight = 2;
+  static const int nodeEat = 3;
+  static const int nodePlay = 4;
+  static const int nodeMate = 5; 
 
 
   ////////// WORLD FUNCTIONS ////////
