@@ -290,9 +290,9 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     
     int nodeInput;
 
-    switch(gardenMap(orgFront.x, orgFront.y)) {
-        case GardenWorld::charDirt: nodeInput = nodeDirt; break;
-        case GardenWorld::charFood1: nodeInput = nodeFood1; break;
+    switch(gardenMap(orgFront)) {
+        case charDirt: nodeInput = nodeDirt; break;
+        case charFood1: nodeInput = nodeFood1; break;
         case charFood2: nodeInput = nodeFood2; break;
         case charRock: nodeInput = nodeRock; break;
         case charToy: nodeInput = nodeToy; break;
@@ -315,8 +315,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     // Returns the index of the node with the highest output
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
     int nodeMax = std::distance(brainOutputs.begin(), std::max_element(brainOutputs.begin(), brainOutputs.end()));
-    // Determine action based upon the highest scoring output node
     
+    // Determine action based upon the highest scoring output node
     switch (nodeMax) {
         case nodeForward: 
             orgPosition.x += dx[orgFacing];
@@ -338,8 +338,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             score += 0.1;
             break;
         case nodeEat: //TODO: Edit so their fullness goes up
-            if (gardenMap(orgFront.x, orgFront.y) == charFood1 || gardenMap(orgFront.x, orgFront.y) == charFood2) {
-                gardenMap(orgFront.x, orgFront.y) = charDirt;
+            if (gardenMap(orgFront) == charFood1 || gardenMap(orgFront) == charFood2) {
+                gardenMap(orgFront) = charDirt;
                 score += 1.0;
             }
             break;
@@ -349,9 +349,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             break;
     }
    
-    if (visualize) {
-        std::cout << "organism with ID " << org->ID << " facing " << orgFacing << " at " << r << std::endl;
-    }
     // Wrap arounds
     if (orgPosition.x > gardenSize - 1) {
         orgPosition.x = 0;
@@ -366,6 +363,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     } 
 
     }
+  
   org->dataMap.append("score", score);
 
   if (visualize) {

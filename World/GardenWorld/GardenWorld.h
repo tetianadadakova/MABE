@@ -125,11 +125,11 @@ public:
 
   //// Drives
   
-  const int numDrives = 4;
-  const int nodeAmusement = 6;
-  const int nodeDesire = 7;
-  const int nodeFullness = 8;
-  const int nodePain = 9;
+  static const int numDrives = 4;
+  static const int nodeAmusement = 6;
+  static const int nodeDesire = 7;
+  static const int nodeFullness = 8;
+  static const int nodePain = 9;
  
   // Output Nodes
   static const int nodeForward = 0;
