@@ -392,9 +392,11 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood1;
+                score += valFood1/10.0;
             } else if (gardenMap(orgFront) == charFood2) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood2;
+                score += valFood2/10.0;
             } else if (gardenMap(orgFront) == charRock) {
                 *pain += 30.0;
             }
@@ -431,7 +433,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     }
   }
 
-  score = age;
+  score += age;
   
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
