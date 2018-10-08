@@ -49,12 +49,12 @@ std::shared_ptr<ParameterLink<int>> GardenWorld::switchTimePL =
                                    "If dynamic, number of ticks before nutrition values switch.");
 
 std::shared_ptr<ParameterLink<double>> GardenWorld::valFood1PL =
-    Parameters::register_parameter("WORLD_GARDEN_FOOD-valFood1", 1.0,
-                                   "Starting nutritional value of Food1 [0 to 1.0].");
+    Parameters::register_parameter("WORLD_GARDEN_FOOD-valFood1", 30.0,
+                                   "Starting nutritional value of Food1.");
 
 std::shared_ptr<ParameterLink<double>> GardenWorld::valFood2PL =
-    Parameters::register_parameter("WORLD_GARDEN_FOOD-valFood2", 0.3,
-                                   "Starting nutritional value of Food2 [0 to 1.0].");
+    Parameters::register_parameter("WORLD_GARDEN_FOOD-valFood2", 10.0,
+                                   "Starting nutritional value of Food2.");
 
 // WORLD_GARDEN_OBJECTS parameters
 
@@ -280,8 +280,6 @@ std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2
 //
 // Organism I/O
 // - Give each organism a location
-// - Create input vector 
-// - Create output vector of length 6?
 // 
 // Implement Reproduction
 // 
@@ -296,8 +294,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   std::vector<Point2d> availableLocations = gardenMapAndLocations.second;
   //std::vector< std::vector<int> > organismLocations = initializeOrganismLocations(&gardenMap, &availableLocations, org, orgPopSize);
   
-  
-
   // Specify brain
   auto brain = org->brains[brainNamePL->get(PT)];
 
@@ -434,8 +430,10 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   org->dataMap.append("steps", steps);
   org->dataMap.append("turns", turns);
   org->dataMap.append("eats", eats);
+  
   if (visualize) {
     std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
     std::cout << "organism with ID " << org->ID << " ended at " << orgPosition.x << "," << orgPosition.y << std::endl;
   }
+
 }
