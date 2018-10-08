@@ -301,24 +301,31 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   // Specify brain
   auto brain = org->brains[brainNamePL->get(PT)];
 
-  // Set initial drive values
+  // Create pointers to the input values 
+  double * amusement = &(brain->inputValues[nodeAmusement]);
+  double * desire = &(brain->inputValues[nodeDesire]);
+  double * fullness = &(brain->inputValues[nodeFullness]);
+  double * pain = &(brain->inputValues[nodePain]);
   
-  brain->setInput(nodeAmusement, initAmusement);
-  brain->setInput(nodeDesire, initDesire);
-  brain->setInput(nodeFullness, initFullness);
-  brain->setInput(nodePain, initPain);
+  // Set initial drive values
+  *amusement = initAmusement;
+  *desire = initDesire;
+  *fullness = initFullness;
+  *pain = initPain;
 
+  // FOR TESTING ONLY
+  // Start all organisms at (0,0) and facing left
   Point2d orgPosition(0,0);
   int orgFacing = 0;
   
-  double score = 0.0;
-  
-  // Get x and y coordinates of the point in front of the organism 
-  Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
-  
+  // Scorekeeping
+  double score = 0.0; 
   int steps = 0;
   int turns = 0; 
   int eats = 0;
+
+  // Get x and y coordinates of the point in front of the organism 
+  Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
 
   for (int r = 0; r < evaluationsPerGeneration; r++) {
     
@@ -359,11 +366,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
     int nodeMax = std::distance(brainOutputs.begin(), std::max_element(brainOutputs.begin(), brainOutputs.end()));
 
-    // Get the current values of the drives
-    double amusement = brain->readInput(nodeAmusement);
-    double desire = brain->readInput(nodeDesire);
-    double fullness = brain->readInput(nodeFullness);
-    double pain = brain->readInput(nodePain);
 
     // Determine action based upon the highest scoring output node
     switch (nodeMax) {
@@ -389,31 +391,27 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         case nodeEat:
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
-                brain->setInput(nodeFullness, fullness + valFood1);
+                *fullness += valFood1;
             } else if (gardenMap(orgFront) == charFood2) {
                 gardenMap(orgFront) = charDirt;
-                brain->setInput(nodeFullness, fullness + valFood2);
+                *fullness += valFood2;
             } else if (gardenMap(orgFront) == charRock) {
-                pain += 30.0;
-                brain->setInput(nodePain, pain);
+                *pain += 30.0;
             }
             eats++;
             break;
         case nodePlay:
             if (gardenMap(orgFront) == charToy) {
-                amusement += 30.0;
-                brain->setInput(nodeAmusement, amusement); 
+                *amusement += 30.0;
             } else if (gardenMap(orgFront) == charRock) {
-                amusement -= 10.0;
-                brain->setInput(nodeAmusement, amusement);
+                *amusement -= 10.0;
             }
             break;
         case nodeMate: //TODO: Implement Mating
             break;
     }
 
-    fullness -= 0.5;
-    brain->setInput(nodeFullness, fullness);
+    *fullness -= 0.5;
     
     // Wrap arounds
     if (orgPosition.x > gardenSize - 1) {
@@ -428,7 +426,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
-    score = brain->readInput(nodeFullness);
+    score = *fullness;
   }
 
   
