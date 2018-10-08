@@ -106,24 +106,24 @@ std::shared_ptr<ParameterLink<std::string>> GardenWorld::brainNamePL =
 
 ///////////////////////// I/O NODES ///////////////////////////////////
 
-// Input Nodes: Sensory
-const int GardenWorld::nodeDirt = 0;
-const int GardenWorld::nodeFood1 = 1;
-const int GardenWorld::nodeFood2 = 2;
-const int GardenWorld::nodeRock = 3;
-const int GardenWorld::nodeToy = 4;
-const int GardenWorld::nodeOrg = 5;
-
-const int GardenWorld::numObjects = 6;
 
 // Input Nodes: Drives
-const int GardenWorld::nodeAmusement = 6;
-const int GardenWorld::nodeDesire = 7;
-const int GardenWorld::nodeFullness = 8;
-const int GardenWorld::nodePain = 9;
+const int GardenWorld::nodeAmusement = 0;
+const int GardenWorld::nodeDesire = 1;
+const int GardenWorld::nodeFullness = 2;
+const int GardenWorld::nodePain = 3;
 
 const int GardenWorld::numDrives = 4;
 
+// Input Nodes: Objects
+const int GardenWorld::nodeDirt = 4;
+const int GardenWorld::nodeFood1 = 5;
+const int GardenWorld::nodeFood2 = 6;
+const int GardenWorld::nodeRock = 7;
+const int GardenWorld::nodeToy = 8;
+const int GardenWorld::nodeOrg = 9;
+
+const int GardenWorld::numObjects = 6;
 // Output Nodes
 
 const int GardenWorld::nodeForward = 0;
@@ -176,6 +176,7 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
   popFileColumns.push_back("steps");
   popFileColumns.push_back("turns");
   popFileColumns.push_back("eats");
+  popFileColumns.push_back("age_at_death");
 
 }
 // Initialize the map and return its available locations
@@ -309,36 +310,38 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   *fullness = initFullness;
   *pain = initPain;
 
-  // FOR TESTING ONLY
-  // Start all organisms at (0,0) and facing left
-  // Start at age 0
-  Point2d orgPosition(0,0);
-  int orgFacing = 0;
+  // Initialize Organism Vitals
   int age = 0;
   bool alive = true;
-
+  
   // Scorekeeping
   double score = 0.0; 
   int steps = 0;
   int turns = 0; 
   int eats = 0;
 
+  // FOR TESTING ONLY
+  // Start all organisms at (0,0) and facing left
+  // Start at age 0
+  Point2d orgPosition(0,0);
+  int orgFacing = 0;
+  
   // Get x and y coordinates of the point in front of the organism 
   Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
+
 
   while (alive) { 
     
     brain->resetBrain();
     
-    for (int node = 0; node < numObjects; node++) {
+    // Objects are the last 6 inputs
+    for (int node = numDrives; node < numDrives + numObjects; node++) {
         brain->setInput(node, 0); 
     }
     
     
     // Set input node based on what the item at orgFront is
-    
     int nodeInput;
-
     switch(gardenMap(orgFront)) {
         case charDirt: nodeInput = nodeDirt; break;
         case charFood1: nodeInput = nodeFood1; break;
@@ -346,23 +349,28 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         case charRock: nodeInput = nodeRock; break;
         case charToy: nodeInput = nodeToy; break;
         case charOrg: nodeInput = nodeOrg; break;
-
     }
-
-    // TODO: Amusement, Desire, Fullness, Pain drive updates
-    // Amusement, Fullness, Pain should go down over time
-    // Desire should modulate on its own
-    //
-    // For now, for tests, increase the organism's score if fullness is > 75.0
-
     brain->setInput(nodeInput, 1); 
 
+    // Decrement the drives due to the passage of time
+    *amusement -= 0.5;
+    *fullness -= 0.5;
+    *pain -= 0.5;
+
+    //TODO: Set oscillation of desire drive
+
+
+
+
+    // Obtain state of the drives before the brain updates
+    std::vector<double> prevDrives{*amusement, *desire, *fullness, *pain};
+    
+    // Run through one action
     brain->update();
     age++;
 
-    std::vector<double> brainOutputs = brain->outputValues;
-
     // Returns the index of the node with the highest output
+    std::vector<double> brainOutputs = brain->outputValues;
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
     int nodeMax = std::distance(brainOutputs.begin(), std::max_element(brainOutputs.begin(), brainOutputs.end()));
 
@@ -392,11 +400,9 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood1;
-                score += valFood1/10.0;
             } else if (gardenMap(orgFront) == charFood2) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood2;
-                score += valFood2/10.0;
             } else if (gardenMap(orgFront) == charRock) {
                 *pain += 30.0;
             }
@@ -413,9 +419,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             break;
     }
 
-    *fullness -= 0.5;
-    
-    // Wrap arounds
+    // Wrap around the edges of the world
     if (orgPosition.x > gardenSize - 1) {
         orgPosition.x = 0;
     } else if (orgPosition.x < 0) {
@@ -428,18 +432,52 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
+    // Determine whether the organism has either starved to death or died of old age
+    // TODO: More sophisticated old-age death as implemented in teagarden
     if (*fullness <= 0.0 || age >= 500) {
         alive = false;
     }
-  }
+  
+    // Score calculation based on whether drives increased or decreased
+    std::vector<double> diffDrives(numDrives);
+    for (int node = 0; node < numDrives; node++) {
+        diffDrives[node] = brain->readInput(node) - prevDrives[node];
+    }
+    
+    // Reward or punish for playing
+    if (diffDrives[nodeAmusement] < -0.5) {
+        score -= 1.0;
+    } else if (diffDrives[nodeAmusement] > 1.0) {
+        score += 1.0;
+    }
+    
+    // Reward for REDUCING desire
 
-  score += age;
+    if (diffDrives[nodeDesire] < -1.1) {
+        score += 1.0;
+    }
+
+    // Reward for eating
+    if (diffDrives[nodeFullness] > 0.0) {
+        score += 1.0;
+    }
+    
+    // Reward or punish for pain
+    if (diffDrives[nodePain] > 0.0) {
+        score -= 1.0;
+    } else {
+        score += 1.0;
+    }
+
+  
+  }
   
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
   org->dataMap.append("turns", turns);
   org->dataMap.append("eats", eats);
-  
+  org->dataMap.append("age_at_death", age); 
+
   if (visualize) {
     std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
     std::cout << "organism with ID " << org->ID << " ended at " << orgPosition.x << "," << orgPosition.y << std::endl;
