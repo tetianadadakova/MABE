@@ -113,31 +113,32 @@ public:
 
   // Input Nodes
   
-  //// Senses
+  //// Objects
   
-  static const int numObjects = 6;
-  static const int nodeDirt = 0;
-  static const int nodeFood1 = 1;
-  static const int nodeFood2 = 2;
-  static const int nodeRock = 3;
-  static const int nodeToy = 4;
-  static const int nodeOrg = 5;
+  static const int numObjects;
+  static const int nodeDirt;
+  static const int nodeFood1;
+  static const int nodeFood2;
+  static const int nodeRock;
+  static const int nodeToy;
+  static const int nodeOrg;
 
   //// Drives
   
-  static const int numDrives = 4;
-  static const int nodeAmusement = 6;
-  static const int nodeDesire = 7;
-  static const int nodeFullness = 8;
-  static const int nodePain = 9;
+  static const int numDrives;
+  static const int nodeAmusement;
+  static const int nodeDesire;
+  static const int nodeFullness;
+  static const int nodePain;
  
   // Output Nodes
-  static const int nodeForward = 0;
-  static const int nodeLeft = 1;
-  static const int nodeRight = 2;
-  static const int nodeEat = 3;
-  static const int nodePlay = 4;
-  static const int nodeMate = 5; 
+  static const int numOutputs;
+  static const int nodeForward;
+  static const int nodeLeft;
+  static const int nodeRight;
+  static const int nodeEat;
+  static const int nodePlay;
+  static const int nodeMate; 
 
 
   ////////// WORLD FUNCTIONS ////////

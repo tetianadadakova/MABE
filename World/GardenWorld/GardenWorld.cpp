@@ -104,6 +104,36 @@ std::shared_ptr<ParameterLink<std::string>> GardenWorld::brainNamePL =
                                    (std::string) "root::",
                                    "namespace for parameters used to define brain");
 
+///////////////////////// I/O NODES ///////////////////////////////////
+
+// Input Nodes: Sensory
+const int GardenWorld::nodeDirt = 0;
+const int GardenWorld::nodeFood1 = 1;
+const int GardenWorld::nodeFood2 = 2;
+const int GardenWorld::nodeRock = 3;
+const int GardenWorld::nodeToy = 4;
+const int GardenWorld::nodeOrg = 5;
+
+const int GardenWorld::numObjects = 6;
+
+// Input Nodes: Drives
+const int GardenWorld::nodeAmusement = 6;
+const int GardenWorld::nodeDesire = 7;
+const int GardenWorld::nodeFullness = 8;
+const int GardenWorld::nodePain = 9;
+
+const int GardenWorld::numDrives = 4;
+
+// Output Nodes
+
+const int GardenWorld::nodeForward = 0;
+const int GardenWorld::nodeLeft = 1;
+const int GardenWorld::nodeRight = 2;
+const int GardenWorld::nodeEat = 3;
+const int GardenWorld::nodePlay = 4;
+const int GardenWorld::nodeMate = 5;
+
+const int GardenWorld::numOutputs = 6;
 
 ////////////////////////// WORLD FUNCTIONS ///////////////////////////
 
@@ -136,12 +166,16 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
   groupName = groupNamePL->get(PT);
   brainName = brainNamePL->get(PT);
 
+
   // Clean out population columns
   popFileColumns.clear();
 
   // Specify which columns to add to population file
   popFileColumns.push_back("score");
   popFileColumns.push_back("score_VAR");
+  popFileColumns.push_back("steps");
+  popFileColumns.push_back("turns");
+  popFileColumns.push_back("eats");
 
 }
 // Initialize the map and return its available locations
@@ -266,8 +300,13 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
 
   // Specify brain
   auto brain = org->brains[brainNamePL->get(PT)];
- 
-  int numBrainoutputs = brain->nrOutputValues;
+
+  // Set initial drive values
+  
+  brain->setInput(nodeAmusement, initAmusement);
+  brain->setInput(nodeDesire, initDesire);
+  brain->setInput(nodeFullness, initFullness);
+  brain->setInput(nodePain, initPain);
 
   Point2d orgPosition(0,0);
   int orgFacing = 0;
@@ -277,6 +316,10 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   // Get x and y coordinates of the point in front of the organism 
   Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
   
+  int steps = 0;
+  int turns = 0; 
+  int eats = 0;
+
   for (int r = 0; r < evaluationsPerGeneration; r++) {
     
     brain->resetBrain();
@@ -315,40 +358,63 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     // Returns the index of the node with the highest output
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
     int nodeMax = std::distance(brainOutputs.begin(), std::max_element(brainOutputs.begin(), brainOutputs.end()));
-    
+
+    // Get the current values of the drives
+    double amusement = brain->readInput(nodeAmusement);
+    double desire = brain->readInput(nodeDesire);
+    double fullness = brain->readInput(nodeFullness);
+    double pain = brain->readInput(nodePain);
+
     // Determine action based upon the highest scoring output node
     switch (nodeMax) {
         case nodeForward: 
             orgPosition.x += dx[orgFacing];
             orgPosition.y += dy[orgFacing];
-            score += 0.2;
+            steps++;
             break;
         case nodeLeft:
             orgFacing--;
             if (orgFacing < 0) {
                 orgFacing = 3;
             }
-            score += 0.1;
+            turns++;
             break;
         case nodeRight:
             orgFacing++;
             if (orgFacing > 3) {
                 orgFacing = 0;
             }
-            score += 0.1;
+            turns++;
             break;
-        case nodeEat: //TODO: Edit so their fullness goes up
-            if (gardenMap(orgFront) == charFood1 || gardenMap(orgFront) == charFood2) {
+        case nodeEat:
+            if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
-                score += 1.0;
+                brain->setInput(nodeFullness, fullness + valFood1);
+            } else if (gardenMap(orgFront) == charFood2) {
+                gardenMap(orgFront) = charDirt;
+                brain->setInput(nodeFullness, fullness + valFood2);
+            } else if (gardenMap(orgFront) == charRock) {
+                pain += 30.0;
+                brain->setInput(nodePain, pain);
             }
+            eats++;
             break;
-        case nodePlay: //TODO: Edit so their amusement goes up
+        case nodePlay:
+            if (gardenMap(orgFront) == charToy) {
+                amusement += 30.0;
+                brain->setInput(nodeAmusement, amusement); 
+            } else if (gardenMap(orgFront) == charRock) {
+                amusement -= 10.0;
+                brain->setInput(nodeAmusement, amusement);
+            }
             break;
         case nodeMate: //TODO: Implement Mating
             break;
     }
-   
+
+    fullness -= 0.5;
+    brain->setInput(nodeFullness, fullness);
+    
     // Wrap arounds
     if (orgPosition.x > gardenSize - 1) {
         orgPosition.x = 0;
@@ -362,10 +428,14 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
-    }
+    score = brain->readInput(nodeFullness);
+  }
+
   
   org->dataMap.append("score", score);
-
+  org->dataMap.append("steps", steps);
+  org->dataMap.append("turns", turns);
+  org->dataMap.append("eats", eats);
   if (visualize) {
     std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
     std::cout << "organism with ID " << org->ID << " ended at " << orgPosition.x << "," << orgPosition.y << std::endl;
