@@ -311,9 +311,12 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
 
   // FOR TESTING ONLY
   // Start all organisms at (0,0) and facing left
+  // Start at age 0
   Point2d orgPosition(0,0);
   int orgFacing = 0;
-  
+  int age = 0;
+  bool alive = true;
+
   // Scorekeeping
   double score = 0.0; 
   int steps = 0;
@@ -323,7 +326,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   // Get x and y coordinates of the point in front of the organism 
   Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
 
-  for (int r = 0; r < evaluationsPerGeneration; r++) {
+  while (alive) { 
     
     brain->resetBrain();
     
@@ -355,7 +358,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     brain->setInput(nodeInput, 1); 
 
     brain->update();
-    
+    age++;
+
     std::vector<double> brainOutputs = brain->outputValues;
 
     // Returns the index of the node with the highest output
@@ -422,9 +426,12 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
-    score = *fullness;
+    if (*fullness <= 0.0 || age >= 500) {
+        alive = false;
+    }
   }
 
+  score = age;
   
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
