@@ -471,6 +471,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
 
   
   }
+
+  score += age/2.0;
   
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
