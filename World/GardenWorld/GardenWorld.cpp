@@ -206,8 +206,7 @@ std::pair< Vector2d<char>,std::vector<Point2d> > GardenWorld::initializeMapAndLo
 
     // Shuffle the availableLocations vector
     // This is our way to randomly distribute resources throughout the garden
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    auto rng = std::default_random_engine(seed);
+    auto rng = std::default_random_engine(Global::randomSeedPL->get(PT));
     std::shuffle(std::begin(availableLocations), std::end(availableLocations), rng);
     
     // Determine counts of resources from percents and garden area
@@ -332,7 +331,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
 
   while (alive) { 
     
-    brain->resetBrain();
+  //  brain->resetBrain();
     
     // Objects are the last 6 inputs
     for (int node = numDrives; node < numDrives + numObjects; node++) {
@@ -419,6 +418,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             break;
     }
 
+    
     // Wrap around the edges of the world
     if (orgPosition.x > gardenSize - 1) {
         orgPosition.x = 0;
@@ -432,7 +432,18 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
+    if (orgPosition.x && orgPosition.y) {
+        std::cout << "ID: " << org->ID << " Facing: " << orgFacing << std::endl;
+    }
+    
+    // Print Current Position: DEBUGGING
+    if (orgPosition.x && orgPosition.y) {
+        std::cout << "ID: " << org->ID << " Position: " << orgPosition.x << "," << orgPosition.y << std::endl;
+    }
     // Determine whether the organism has either starved to death or died of old age
+    
+    
+    
     // TODO: More sophisticated old-age death as implemented in teagarden
     if (*fullness <= 0.0 || age >= 500) {
         alive = false;
@@ -452,7 +463,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     }
     
     // Reward for REDUCING desire
-
     if (diffDrives[nodeDesire] < -1.1) {
         score += 1.0;
     }
@@ -472,8 +482,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   
   }
 
-  score += age/2.0;
-  
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
   org->dataMap.append("turns", turns);
