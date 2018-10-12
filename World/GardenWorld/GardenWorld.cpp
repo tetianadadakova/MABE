@@ -351,15 +351,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     }
     brain->setInput(nodeInput, 1); 
 
-    // Decrement the drives due to the passage of time
-    *amusement -= 0.5;
-    *fullness -= 0.5;
-    *pain -= 0.5;
 
     //TODO: Set oscillation of desire drive
-
-
-
 
     // Obtain state of the drives before the brain updates
     std::vector<double> prevDrives{*amusement, *desire, *fullness, *pain};
@@ -380,6 +373,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             orgPosition.x += dx[orgFacing];
             orgPosition.y += dy[orgFacing];
             steps++;
+            score += 0.01;
             break;
         case nodeLeft:
             orgFacing--;
@@ -387,6 +381,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
                 orgFacing = 3;
             }
             turns++;
+            score += 0.1;
             break;
         case nodeRight:
             orgFacing++;
@@ -395,6 +390,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             }
             turns++;
             break;
+            score += 0.1;
         case nodeEat:
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
@@ -432,26 +428,26 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         orgPosition.y = gardenSize - 1;
     } 
 
-    if (orgPosition.x && orgPosition.y) {
-        std::cout << "ID: " << org->ID << " Facing: " << orgFacing << std::endl;
-    }
     
-    // Print Current Position: DEBUGGING
-    if (orgPosition.x && orgPosition.y) {
-        std::cout << "ID: " << org->ID << " Position: " << orgPosition.x << "," << orgPosition.y << std::endl;
-    }
     // Determine whether the organism has either starved to death or died of old age
-    
-    
-    
     // TODO: More sophisticated old-age death as implemented in teagarden
     if (*fullness <= 0.0 || age >= 500) {
         alive = false;
     }
   
+    // Decrement the drives due to the passage of time
+    *amusement -= 0.5;
+    *fullness -= 0.5;
+    *pain -= 0.5;
+
+    // Minimum 0
+    
     // Score calculation based on whether drives increased or decreased
     std::vector<double> diffDrives(numDrives);
     for (int node = 0; node < numDrives; node++) {
+        if (brain->readInput(node) < 0) {
+            brain->inputValues[node] = 0;
+        }
         diffDrives[node] = brain->readInput(node) - prevDrives[node];
     }
     
