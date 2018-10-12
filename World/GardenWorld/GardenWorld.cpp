@@ -37,6 +37,11 @@ std::shared_ptr<ParameterLink<int>> GardenWorld::maxGenPL =
     Parameters::register_parameter("WORLD_GARDEN-maxGen", 10,
                                    "Number of concurrent generations allowed in the world. "
                                    "When maxGen is reached for a lineage, no more children will be born until the eldest generation dies.");
+
+std::shared_ptr<ParameterLink<int>> GardenWorld::maxAgePL =
+    Parameters::register_parameter("WORLD_GARDEN-maxAge", 500,
+                                   "Maximum age for the organisms in updates");
+
 // WORLD_GARDEN_FOOD parameters
 
 std::shared_ptr<ParameterLink<std::string>> GardenWorld::gardenModePL =
@@ -147,6 +152,7 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
   gardenSize = gardenSizePL->get(PT);
   maxPop = maxPopPL->get(PT);
   maxGen = maxGenPL->get(PT);
+  maxAge = maxAgePL->get(PT);
     
   gardenMode = gardenModePL->get(PT);
   switchTime = switchTimePL->get(PT);
@@ -323,6 +329,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   // Start all organisms at (0,0) and facing left
   // Start at age 0
   Point2d orgPosition(0,0);
+  Point2d orgFront;
   int orgFacing = 0;
   
   while (alive) { 
@@ -358,8 +365,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     age++;
 
     // Get x and y coordinates of the point in front of the organism 
-    orgFront.x += dx[orgFacing];
-    orgFront.y += dy[orgFacing];
+    orgFront.x = orgPosition.x + dx[orgFacing];
+    orgFront.y = orgPosition.y + dy[orgFacing];
 
     // Wrap around the edges of the world
     if (orgFront.x > gardenSize - 1) {
@@ -429,7 +436,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     
     // Determine whether the organism has either starved to death or died of old age
     // TODO: More sophisticated old-age death as implemented in teagarden
-    if (*fullness <= 0.0 || age >= 500) {
+    if (*fullness <= 0.0 || age >= maxAge) {
         alive = false;
     }
   

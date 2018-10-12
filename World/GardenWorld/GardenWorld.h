@@ -32,10 +32,12 @@ public:
   static std::shared_ptr<ParameterLink<int>> gardenSizePL;
   static std::shared_ptr<ParameterLink<int>> maxPopPL;
   static std::shared_ptr<ParameterLink<int>> maxGenPL;
+  static std::shared_ptr<ParameterLink<int>> maxAgePL;
   int evaluationsPerGeneration;
   int gardenSize;
   int maxPop;
   int maxGen; 
+  int maxAge;
 
   // Food Parameters
   static std::shared_ptr<ParameterLink<std::string>> gardenModePL;
