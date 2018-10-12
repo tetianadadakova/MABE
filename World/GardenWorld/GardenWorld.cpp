@@ -178,10 +178,13 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
 
   // Specify which columns to add to population file
   popFileColumns.push_back("score");
-  popFileColumns.push_back("score_VAR");
   popFileColumns.push_back("steps");
   popFileColumns.push_back("turns");
   popFileColumns.push_back("eats");
+  popFileColumns.push_back("plays");
+  popFileColumns.push_back("real_eats");
+  popFileColumns.push_back("real_plays");
+  popFileColumns.push_back("rock_plays");
   popFileColumns.push_back("age_at_death");
 
 }
@@ -212,7 +215,8 @@ std::pair< Vector2d<char>,std::vector<Point2d> > GardenWorld::initializeMapAndLo
 
     // Shuffle the availableLocations vector
     // This is our way to randomly distribute resources throughout the garden
-    auto rng = std::default_random_engine(Global::randomSeedPL->get(PT));
+    
+    auto rng = std::default_random_engine(Global::randomSeedPL->get(PT) + Global::update);
     std::shuffle(std::begin(availableLocations), std::end(availableLocations), rng);
     
     // Determine counts of resources from percents and garden area
@@ -284,9 +288,6 @@ std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2
 
 // TODO
 //
-// Organism I/O
-// - Give each organism a location
-// 
 // Implement Reproduction
 // 
 // Implement Archiving
@@ -321,20 +322,45 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   
   // Scorekeeping
   double score = 0.0; 
+  
   int steps = 0;
   int turns = 0; 
+  
+  // Attempted eats vs. times food eaten
   int eats = 0;
+  int real_eats = 0;
 
-  // FOR TESTING ONLY
+  // Attempted plays, times toy played with, times rock played with
+  int plays = 0;
+  int real_plays = 0;
+  int rock_plays = 0;
+
   // Start all organisms at (0,0) and facing left
-  // Start at age 0
   Point2d orgPosition(0,0);
   Point2d orgFront;
   int orgFacing = 0;
+
   
   while (alive) { 
     
   //  brain->resetBrain();
+    
+    // Get x and y coordinates of the point in front of the organism 
+    orgFront.x = orgPosition.x + dx[orgFacing];
+    orgFront.y = orgPosition.y + dy[orgFacing];
+    
+    // Wrap around the edges of the world
+    if (orgFront.x > gardenSize - 1) {
+        orgFront.x = 0;
+    } else if (orgFront.x < 0) {
+        orgFront.x = gardenSize - 1;
+    } 
+
+    if (orgFront.y > gardenSize - 1) {
+        orgFront.y = 0; 
+    } else if (orgFront.y < 0) {
+        orgFront.y = gardenSize - 1;
+    } 
     
     // Objects are the last 6 inputs
     for (int node = numDrives; node < numDrives + numObjects; node++) {
@@ -359,28 +385,14 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
 
     // Obtain state of the drives before the brain updates
     std::vector<double> prevDrives{*amusement, *desire, *fullness, *pain};
-    
+   
+    //gardenMap.showGrid();
+    //std::cout << "XY: " << orgPosition.x << "," << orgPosition.y << " Facing: " << orgFacing << std::endl;
     // Run through one action
     brain->update();
     age++;
 
-    // Get x and y coordinates of the point in front of the organism 
-    orgFront.x = orgPosition.x + dx[orgFacing];
-    orgFront.y = orgPosition.y + dy[orgFacing];
 
-    // Wrap around the edges of the world
-    if (orgFront.x > gardenSize - 1) {
-        orgFront.x = 0;
-    } else if (orgFront.x < 0) {
-        orgFront.x = gardenSize - 1;
-    } 
-
-    if (orgFront.y > gardenSize - 1) {
-        orgFront.y = 0; 
-    } else if (orgFront.y < 0) {
-        orgFront.y = gardenSize - 1;
-    } 
-    
     // Returns the index of the node with the highest output
     std::vector<double> brainOutputs = brain->outputValues;
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
@@ -414,6 +426,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood1;
+                real_eats++;
             } else if (gardenMap(orgFront) == charFood2) {
                 gardenMap(orgFront) = charDirt;
                 *fullness += valFood2;
@@ -425,9 +438,12 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         case nodePlay:
             if (gardenMap(orgFront) == charToy) {
                 *amusement += 30.0;
+                real_plays++;
             } else if (gardenMap(orgFront) == charRock) {
                 *amusement -= 10.0;
+                rock_plays++;
             }
+            plays++;
             break;
         case nodeMate: //TODO: Implement Mating
             break;
@@ -489,6 +505,10 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   org->dataMap.append("steps", steps);
   org->dataMap.append("turns", turns);
   org->dataMap.append("eats", eats);
+  org->dataMap.append("real_eats", real_eats);
+  org->dataMap.append("plays", plays);
+  org->dataMap.append("real_plays", real_plays);
+  org->dataMap.append("rock_plays", rock_plays);
   org->dataMap.append("age_at_death", age); 
 
   if (visualize) {
