@@ -325,10 +325,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   Point2d orgPosition(0,0);
   int orgFacing = 0;
   
-  // Get x and y coordinates of the point in front of the organism 
-  Point2d orgFront(orgPosition.x + dx[orgFacing], orgPosition.y + dy[orgFacing]);
-
-
   while (alive) { 
     
   //  brain->resetBrain();
@@ -361,6 +357,23 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     brain->update();
     age++;
 
+    // Get x and y coordinates of the point in front of the organism 
+    orgFront.x += dx[orgFacing];
+    orgFront.y += dy[orgFacing];
+
+    // Wrap around the edges of the world
+    if (orgFront.x > gardenSize - 1) {
+        orgFront.x = 0;
+    } else if (orgFront.x < 0) {
+        orgFront.x = gardenSize - 1;
+    } 
+
+    if (orgFront.y > gardenSize - 1) {
+        orgFront.y = 0; 
+    } else if (orgFront.y < 0) {
+        orgFront.y = gardenSize - 1;
+    } 
+    
     // Returns the index of the node with the highest output
     std::vector<double> brainOutputs = brain->outputValues;
     double outputMax = *std::max_element(brainOutputs.begin(), brainOutputs.end());
@@ -370,8 +383,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     // Determine action based upon the highest scoring output node
     switch (nodeMax) {
         case nodeForward: 
-            orgPosition.x += dx[orgFacing];
-            orgPosition.y += dy[orgFacing];
+            orgPosition = orgFront;
             steps++;
             score += 0.01;
             break;
@@ -381,7 +393,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
                 orgFacing = 3;
             }
             turns++;
-            score += 0.1;
+            score += 0.01;
             break;
         case nodeRight:
             orgFacing++;
@@ -390,7 +402,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
             }
             turns++;
             break;
-            score += 0.1;
+            score += 0.01;
         case nodeEat:
             if (gardenMap(orgFront) == charFood1) {
                 gardenMap(orgFront) = charDirt;
@@ -413,20 +425,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         case nodeMate: //TODO: Implement Mating
             break;
     }
-
-    
-    // Wrap around the edges of the world
-    if (orgPosition.x > gardenSize - 1) {
-        orgPosition.x = 0;
-    } else if (orgPosition.x < 0) {
-        orgPosition.x = gardenSize - 1;
-    } 
-
-    if (orgPosition.y > gardenSize - 1) {
-        orgPosition.y = 0; 
-    } else if (orgPosition.y < 0) {
-        orgPosition.y = gardenSize - 1;
-    } 
 
     
     // Determine whether the organism has either starved to death or died of old age
@@ -466,6 +464,8 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     // Reward for eating
     if (diffDrives[nodeFullness] > 0.0) {
         score += 1.0;
+    } else {
+        score -= 0.1;
     }
     
     // Reward or punish for pain
