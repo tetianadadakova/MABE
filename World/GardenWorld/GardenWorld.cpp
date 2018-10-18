@@ -461,16 +461,20 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     *fullness -= 0.5;
     *pain -= 0.5;
 
-    // Minimum 0
-    
-    // Score calculation based on whether drives increased or decreased
     std::vector<double> diffDrives(numDrives);
+   
     for (int node = 0; node < numDrives; node++) {
+        
+        // Minimum drive 0
         if (brain->readInput(node) < 0) {
             brain->inputValues[node] = 0;
         }
+        
+        // Comparison to previous drives
         diffDrives[node] = brain->readInput(node) - prevDrives[node];
     }
+    
+    // Score calculation based on whether drives increased or decreased
     
     // Reward or punish for playing
     if (diffDrives[nodeAmusement] < -0.5) {
@@ -501,15 +505,18 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   
   }
 
+  org->dataMap.append("age_at_death", age); 
+  
   org->dataMap.append("score", score);
   org->dataMap.append("steps", steps);
   org->dataMap.append("turns", turns);
+  
   org->dataMap.append("eats", eats);
   org->dataMap.append("real_eats", real_eats);
+  
   org->dataMap.append("plays", plays);
   org->dataMap.append("real_plays", real_plays);
   org->dataMap.append("rock_plays", rock_plays);
-  org->dataMap.append("age_at_death", age); 
 
   if (visualize) {
     std::cout << "organism with ID " << org->ID << " scored " << score << std::endl;
