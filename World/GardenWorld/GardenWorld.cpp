@@ -178,14 +178,17 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
 
   // Specify which columns to add to population file
   popFileColumns.push_back("score");
+  popFileColumns.push_back("age_at_death");
+  
   popFileColumns.push_back("steps");
   popFileColumns.push_back("turns");
+  
   popFileColumns.push_back("eats");
-  popFileColumns.push_back("plays");
   popFileColumns.push_back("real_eats");
+  
+  popFileColumns.push_back("plays");
   popFileColumns.push_back("real_plays");
   popFileColumns.push_back("rock_plays");
-  popFileColumns.push_back("age_at_death");
 
 }
 // Initialize the map and return its available locations
@@ -343,8 +346,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
   
   while (alive) { 
     
-  //  brain->resetBrain();
-    
     // Get x and y coordinates of the point in front of the organism 
     orgFront.x = orgPosition.x + dx[orgFacing];
     orgFront.y = orgPosition.y + dy[orgFacing];
@@ -386,8 +387,6 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
     // Obtain state of the drives before the brain updates
     std::vector<double> prevDrives{*amusement, *desire, *fullness, *pain};
    
-    //gardenMap.showGrid();
-    //std::cout << "XY: " << orgPosition.x << "," << orgPosition.y << " Facing: " << orgFacing << std::endl;
     // Run through one action
     brain->update();
     age++;
