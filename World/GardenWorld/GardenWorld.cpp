@@ -148,6 +148,7 @@ GardenWorld::GardenWorld(std::shared_ptr<ParametersTable> PT_)
     : AbstractWorld(PT_) {
 
   // Localize parameters
+
   evaluationsPerGeneration = evaluationsPerGenerationPL->get(PT);
   gardenSize = gardenSizePL->get(PT);
   maxPop = maxPopPL->get(PT);
@@ -257,11 +258,10 @@ void GardenWorld::addItemsToGarden(Vector2d<char> &gardenMap, std::vector<Point2
 // Inserts a char representing the initial location of each organism (as in addItemsToGarden)
 // Returns a vector where each entry is a vector which contains the location of each organism and its ID.
 
-std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2d<char> &gardenMap, std::vector<Point2d> &availableLocations, char org, int orgPopSize) {
+std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2d<char> &gardenMap, std::vector<Point2d> &availableLocations, char charOrg, int initPop) {
     
     size_t numAvailableLocations = availableLocations.size();
-    std::cout << "Locations: " << numAvailableLocations << std::endl;
-    if (orgPopSize > numAvailableLocations) {
+    if (initPop > numAvailableLocations) {
         std::cout << "ERROR! In GardenWorld:: the initial population exceeds the number of available garden squares." << std::endl;
         std::cout << "Please increase the garden size, reduce the number of garden objects, reduce the initial population, or some combination of these options." <<std::endl;
         std::cout << "Exiting." << std::endl;
@@ -273,7 +273,7 @@ std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2
 
     // we iterate backwards through the vector because backwards vector travel is easier than forwards
     // requires less rearranging (following indices don't need to move up)
-    for (int orgID = 0; orgID < orgPopSize; orgID++) {
+    for (int orgID = 0; orgID < initPop; orgID++) {
         
         // adds organism to garden
         int xLoc = availableLocations.back().x;
@@ -297,13 +297,16 @@ std::vector< std::vector<int> > GardenWorld::initializeOrganismLocations(Vector2
 
 // Evaluation Functions
 void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int visualize, int debug) {
-  
+ 
+  // Temporary Initial Population
+  int initPop = 10;
+
   // Initialize the garden map and the available locations 
   std::pair< Vector2d<char> , std::vector<Point2d> > gardenMapAndLocations = initializeMapAndLocations(gardenSize, pctRock, pctToy, pctFood1, pctFood2);
   Vector2d<char> gardenMap = gardenMapAndLocations.first;
   std::vector<Point2d> availableLocations = gardenMapAndLocations.second;
-  //std::vector< std::vector<int> > organismLocations = initializeOrganismLocations(&gardenMap, &availableLocations, org, orgPopSize);
-  
+  std::vector< std::vector<int> > organismLocations = initializeOrganismLocations(gardenMap, availableLocations, charOrg, initPop);
+
   // Specify brain
   auto brain = org->brains[brainNamePL->get(PT)];
 
@@ -470,7 +473,7 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
         } else if (brain->readInput(node) > 150.0) {
             brain->inputValues[node] = 150.0;
         }
-        
+    
         // Comparison to previous drives
         diffDrives[node] = brain->readInput(node) - prevDrives[node];
     }
