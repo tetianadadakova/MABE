@@ -464,9 +464,11 @@ void GardenWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze, int v
    
     for (int node = 0; node < numDrives; node++) {
         
-        // Minimum drive 0
-        if (brain->readInput(node) < 0) {
-            brain->inputValues[node] = 0;
+        // Minimum drive 0, Maximum drive 150
+        if (brain->readInput(node) < 0.0) {
+            brain->inputValues[node] = 0.0;
+        } else if (brain->readInput(node) > 150.0) {
+            brain->inputValues[node] = 150.0;
         }
         
         // Comparison to previous drives
