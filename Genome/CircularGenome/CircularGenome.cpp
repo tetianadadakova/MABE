@@ -584,13 +584,15 @@ void CircularGenome<T>::mutate() {
 		}
 		
                 // create a new genome segment
-                int segmentStart = Random::getInt((int)sites.size() - segmentSize);
-		std::vector<T> segment;
+                int segmentStart;
+                std::vector<T> segment;
 		segment.clear();
                 auto it = sites.begin();
                 
                 if (CircularGenomeParameters::mutationIndelCopyFirstPL->get(PT)) {
+                    
                     // copy a portion of the genome
+                    segmentStart = Random::getInt((int)sites.size() - segmentSize);
 		    segment.insert(segment.begin(), it + segmentStart, it + segmentStart + segmentSize);
 		    it = sites.begin();
                 
@@ -601,9 +603,11 @@ void CircularGenome<T>::mutate() {
                     sites.erase(sites.begin() + segmentStart, sites.begin() + segmentStart + segmentSize);
                    
                     // copy a portion of the genome
+                    segmentStart = Random::getInt((int)sites.size() - segmentSize);
 		    segment.insert(segment.begin(), it + segmentStart, it + segmentStart + segmentSize);
 		    it = sites.begin();
                 }
+                
 
                 // insert the new segment into the genome
                 if (CircularGenomeParameters::mutationIndelReplacePL->get(PT)) {
