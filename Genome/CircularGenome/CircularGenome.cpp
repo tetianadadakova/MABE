@@ -20,6 +20,11 @@ std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationCopyMaxSiz
 std::shared_ptr<ParameterLink<double>> CircularGenomeParameters::mutationDeleteRatePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationDeleteRate", 0.00002, "per site deletion rate");
 std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationDeleteMinSizePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationDeleteMinSize", 128, "minimum size of insertion mutation");
 std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationDeleteMaxSizePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationDeleteMaxSize", 512, "maximum size of insertion mutation");
+std::shared_ptr<ParameterLink<double>> CircularGenomeParameters::mutationIndelRatePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationIndelRate", 0.00002, "per site deletion rate");
+std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationIndelMinSizePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationIndelMinSize", 128, "minimum size of insertion-deletion mutation");
+std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationIndelMaxSizePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationIndelMaxSize", 512, "maximum size of insertion-deletion mutation");
+std::shared_ptr<ParameterLink<bool>> CircularGenomeParameters::mutationIndelReplacePL = Parameters::register_parameter("GENOME_CIRCULAR-mutationIndelReplace", false, "whether insertion happens in a random location or at the same site of deletion (0 = random, 1 = same location)");
+std::shared_ptr<ParameterLink<bool>> CircularGenomeParameters::mutationIndelCopyFirstPL = Parameters::register_parameter("GENOME_CIRCULAR-mutationIndelCopyFirst", true, "whether copy or deletion happens first (0 = delete first, 1 = copy first)");
 std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::sizeMinPL = Parameters::register_parameter("GENOME_CIRCULAR-sizeMin", 2000, "if genome is smaller then this, mutations will only increase chromosome size");
 std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::sizeMaxPL = Parameters::register_parameter("GENOME_CIRCULAR-sizeMax", 20000, "if genome is larger then this, mutations will only decrease chromosome size");
 std::shared_ptr<ParameterLink<int>> CircularGenomeParameters::mutationCrossCountPL = Parameters::register_parameter("GENOME_CIRCULAR-mutationCrossCount", 3, "number of crosses when performing crossover (including during recombination)");
@@ -329,10 +334,14 @@ void CircularGenome<T>::setupCircularGenome(int _size, double _alphabetSize) {
         genomeFileColumns.push_back("countCopy");
         genomeFileColumns.push_back("countDelete");
         genomeFileColumns.push_back("countPoint");
+        genomeFileColumns.push_back("countIndel");
 	// define columns to added to ave files
 	popFileColumns.clear();
 	popFileColumns.push_back("genomeLength");
-
+        popFileColumns.push_back("countCopy");
+        popFileColumns.push_back("countDelete");
+        popFileColumns.push_back("countPoint");
+        popFileColumns.push_back("countIndel");
 	recordDataMap();
 }
 
@@ -493,12 +502,18 @@ int CircularGenome<T>::incrementDelete() {
     return countDelete++;
 }
 
+template<class T>
+int CircularGenome<T>::incrementIndel() {
+    return countIndel++;
+}
+
 // apply mutations to this genome
 template<class T>
 void CircularGenome<T>::mutate() {
 	int howManyPoint = Random::getBinomial((int)sites.size(), CircularGenomeParameters::mutationPointRatePL->get(PT));
 	int howManyCopy = Random::getBinomial((int)sites.size(), CircularGenomeParameters::mutationCopyRatePL->get(PT));
 	int howManyDelete = Random::getBinomial((int)sites.size(), CircularGenomeParameters::mutationDeleteRatePL->get(PT));
+	int howManyIndel = Random::getBinomial((int)sites.size(), CircularGenomeParameters::mutationIndelRatePL->get(PT));
         // do some point mutations
 	for (int i = 0; i < howManyPoint; i++) {
 		pointMutate();
@@ -555,6 +570,52 @@ void CircularGenome<T>::mutate() {
         
                 incrementDelete();
 	}
+        // do some combination insertion-deletion mutations
+	int IDMax = CircularGenomeParameters::mutationIndelMaxSizePL->get(PT);
+	int IDMin = CircularGenomeParameters::mutationIndelMinSizePL->get(PT);
+	for (int i = 0; (i < howManyIndel) && (((int)sites.size()) < MaxGenomeSize); i++) {
+
+		int segmentSize = Random::getInt(IDMax - IDMin) + IDMin;
+		if (segmentSize > (int)sites.size()) {
+			std::cout << "segmentSize = " << segmentSize << "  sites.size() = " << (int)sites.size() << std::endl;
+			std::cout << "maxSize:minSize" << IDMax << ":" << IDMin << std::endl;
+			std::cout << "ERROR: in curlarGenome<T>::mutate(), segmentSize for indel is > then sites.size()!\nExiting!" << std::endl;
+			exit(1);
+		}
+		
+                // create a new genome segment
+                int segmentStart = Random::getInt((int)sites.size() - segmentSize);
+		std::vector<T> segment;
+		segment.clear();
+                auto it = sites.begin();
+                
+                if (CircularGenomeParameters::mutationIndelCopyFirstPL->get(PT)) {
+                    // copy a portion of the genome
+		    segment.insert(segment.begin(), it + segmentStart, it + segmentStart + segmentSize);
+		    it = sites.begin();
+                
+                    // delete a portion of the genome
+                    sites.erase(sites.begin() + segmentStart, sites.begin() + segmentStart + segmentSize);
+                } else {
+                    // delete a portion of the genome
+                    sites.erase(sites.begin() + segmentStart, sites.begin() + segmentStart + segmentSize);
+                   
+                    // copy a portion of the genome
+		    segment.insert(segment.begin(), it + segmentStart, it + segmentStart + segmentSize);
+		    it = sites.begin();
+                }
+
+                // insert the new segment into the genome
+                if (CircularGenomeParameters::mutationIndelReplacePL->get(PT)) {
+                    sites.insert(it + segmentStart, segment.begin(), segment.end());
+                } else {
+                    sites.insert(it + Random::getInt((int)sites.size()), segment.begin(), segment.end());
+                }
+
+                incrementIndel();
+    
+        }
+
 }
 
 // make a mutated genome. from this genome
@@ -566,6 +627,7 @@ std::shared_ptr<AbstractGenome> CircularGenome<T>::makeMutatedGenomeFrom(std::sh
 	newGenome->countPoint = countPoint;
         newGenome->countDelete = countDelete;
         newGenome->countCopy = countCopy;
+        newGenome->countIndel = countIndel;
         newGenome->mutate();
 	newGenome->recordDataMap();
 	return newGenome;
@@ -663,6 +725,7 @@ DataMap CircularGenome<T>::getStats(std::string& prefix) {
         dataMap.set(prefix + "countPoint", countPoint);
         dataMap.set(prefix + "countCopy", countCopy);
         dataMap.set(prefix + "countDelete", countDelete);
+        dataMap.set(prefix + "countIndel", countIndel);
 	return (dataMap);
 }
 
@@ -751,7 +814,7 @@ void CircularGenome<T>::recordDataMap() {
         dataMap.set("countPoint", countPoint);
         dataMap.set("countCopy", countCopy);
         dataMap.set("countDelete", countDelete);
-
+        dataMap.set("countIndel", countIndel);
 }
 /*
 // load all genomes from a file

@@ -35,7 +35,12 @@ public:
 	static std::shared_ptr<ParameterLink<double>> mutationDeleteRatePL;
 	static std::shared_ptr<ParameterLink<int>> mutationDeleteMinSizePL;
 	static std::shared_ptr<ParameterLink<int>> mutationDeleteMaxSizePL;
-	static std::shared_ptr<ParameterLink<int>> sizeMaxPL;
+	static std::shared_ptr<ParameterLink<double>> mutationIndelRatePL;
+        static std::shared_ptr<ParameterLink<int>> mutationIndelMinSizePL;
+	static std::shared_ptr<ParameterLink<int>> mutationIndelMaxSizePL;
+        static std::shared_ptr<ParameterLink<bool>> mutationIndelReplacePL;
+        static std::shared_ptr<ParameterLink<bool>> mutationIndelCopyFirstPL;
+        static std::shared_ptr<ParameterLink<int>> sizeMaxPL;
 	static std::shared_ptr<ParameterLink<int>> sizeMinPL;
 	static std::shared_ptr<ParameterLink<int>> mutationCrossCountPL;  // number of crosses to make when performing crossover
 };
@@ -171,11 +176,13 @@ public:
         int countPoint = 0;
         int countDelete = 0;
         int countCopy = 0;
-        
+        int countIndel = 0;
+
         virtual int incrementCopy();
         virtual int incrementPoint();
         virtual int incrementDelete();
-	// apply mutations to this genome
+	virtual int incrementIndel();
+        // apply mutations to this genome
 	virtual void mutate() override;
 
 	// make a mutated genome. from this genome
