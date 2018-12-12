@@ -479,10 +479,12 @@ bool CircularGenome<T>::isEmpty() {
 
 template<class T>
 void CircularGenome<T>::pointMutate() {
-	sites[Random::getIndex((int)sites.size())] = Random::getIndex((int)alphabetSize);
+        
+        auto newVal = Random::getIndex((int)std::ceil((mutationPointWindowPL->get(PT))*alphabetSize));
+	sites[Random::getIndex((int)sites.size())] = newVal;
 }
 
-template<>
+templat<>
 void CircularGenome<double>::pointMutate() {
 	sites[Random::getIndex((int)sites.size())] = Random::getDouble(alphabetSize);
 }
