@@ -40,6 +40,8 @@ public:
   static std::shared_ptr<ParameterLink<std::string>>
       nextPopSizePL; // number of genomes in the population
 
+  static std::shared_ptr<ParameterLink<bool>>
+      minimizePL; // whether to minimize score instead of maximize it.
 
   static std::shared_ptr<ParameterLink<double>> cullBelowPL;
   static std::shared_ptr<ParameterLink<double>> cullRemapPL;
@@ -69,6 +71,8 @@ public:
   double minScore;
   double culledMinScore;
 
+  static bool isMinimizingScore; // local of minimizePL
+
   std::vector<int> elites;
   std::vector<double> scores;
   std::vector<double> scoresAfterCull;
@@ -83,6 +87,7 @@ public:
     virtual std::string getType() = 0;
   };
 
+  // TODO this class should have its own file as a subdir in simple optimizer
   class RouletteSelector : public AbstractSelector {
   public:
     RouletteSelector(std::string &argumentsString, SimpleOptimizer *SO_)
@@ -114,7 +119,18 @@ public:
                                                         // get one that's good
                                                         // enough
 		//std::cout << "  " << pick << " score() " << SO->scoresAfterCull[pick] << std::endl;
-	  } while (Random::getDouble(1) > (SO->scoresAfterCull[pick] / SO->culledMaxScore));
+	  } while ( ( \
+                (SimpleOptimizer::isMinimizingScore==false) \
+                && \
+                (Random::getDouble(1) > (SO->scoresAfterCull[pick] / SO->culledMaxScore)) \
+              ) \
+              || \
+              ( \
+                (SimpleOptimizer::isMinimizingScore==true) \
+                && \
+                (Random::getDouble(1) < (SO->scoresAfterCull[pick] / SO->culledMaxScore)) \
+              ) \
+            );
       return pick;
     }
 
@@ -176,9 +192,16 @@ public:
 		//std::cout << tournamentSize << " " << i << "  " <<
          //challanger<<"("<<SO->scoresAfterCull[challanger] << "),winner(" <<
          //SO->scoresAfterCull[winner] << ")";
-        if (SO->scoresAfterCull[challanger] > SO->scoresAfterCull[winner]) {
-			//std::cout << " *";
-          winner = challanger;
+        if (SimpleOptimizer::isMinimizingScore==true) {
+          if (SO->scoresAfterCull[challanger] < SO->scoresAfterCull[winner]) {
+        //std::cout << " *";
+            winner = challanger;
+          }
+        } else /* (SimpleOptimizer::isMinimizingScore==false) */ {
+          if (SO->scoresAfterCull[challanger] > SO->scoresAfterCull[winner]) {
+        //std::cout << " *";
+            winner = challanger;
+          }
         }
          //std::cout << std::endl;
       }

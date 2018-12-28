@@ -14,6 +14,11 @@ std::shared_ptr<ParameterLink<std::string>> SimpleOptimizer::selectionMethodPL =
     Parameters::register_parameter(
         "OPTIMIZER_SIMPLE-selectionMethod", (std::string) "Roulette()",
         "how are parents selected? options: Roulette(),Tournament(size=VAL)");
+std::shared_ptr<ParameterLink<bool>> SimpleOptimizer::minimizePL =
+    Parameters::register_parameter(
+        "OPTIMIZER_SIMPLE-minimize", false,
+        "Whether to minimize the score instead of maximize it.");
+bool SimpleOptimizer::isMinimizingScore = false;
 std::shared_ptr<ParameterLink<int>> SimpleOptimizer::numberParentsPL =
     Parameters::register_parameter(
         "OPTIMIZER_SIMPLE-numberParents", 1,
@@ -79,6 +84,8 @@ SimpleOptimizer::SimpleOptimizer(std::shared_ptr<ParametersTable> PT_)
   elitismCountMT = stringToMTree(elitismCountPL->get(PT));
   elitismRangeMT = stringToMTree(elitismRangePL->get(PT));
   nextPopSizeMT = stringToMTree(nextPopSizePL->get(PT));
+
+  isMinimizingScore = minimizePL->get(PT);
 
   cullBelow = cullBelowPL->get(PT); // -1 or [0,1] orgs who ((opVal - min) / (max - min)) < cullBelow are culled before selection
 									// culled orgs will not be automatically not be allowed to survive
