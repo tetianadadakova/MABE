@@ -26,7 +26,7 @@ std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
     Parameters::register_parameter("WORLD_NK-k", 2,
                                    "range of values each number can take");
 std::shared_ptr<ParameterLink<bool>> NKWorld::treadmillPL =
-    Parameters::register_parameter("WORLD_NK-treadmill", 0,
+    Parameters::register_parameter("WORLD_NK-treadmill", false,
                                    "whether landscape should treadmill over time. 0 = static landscape, 1 = treadmilling landscape");
 std::shared_ptr<ParameterLink<int>> NKWorld::evaluationsPerGenerationPL =
     Parameters::register_parameter("WORLD_TEST-evaluationsPerGeneration", 1,

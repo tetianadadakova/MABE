@@ -48,7 +48,7 @@ public:
   requiredGroups() override {
     return {{groupNamePL->get(PT),
              {"B:" + brainNamePL->get(PT) + ",1," +
-              std::to_string(numberOfOutputsPL->get(PT))}}};
+              std::to_string(nPL->get(PT))}}};
     // requires a root group and a brain (in root namespace) and no addtional
     // genome,
     // the brain must have 1 input, and the variable numberOfOutputs outputs
