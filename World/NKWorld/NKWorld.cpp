@@ -15,6 +15,9 @@
 // by 'mode'.
 
 #include "NKWorld.h"
+#include "../../Utilities/Random.h"
+#include <vector>
+#include <map>
 
 std::shared_ptr<ParameterLink<int>> NKWorld::numberOfOutputsPL =
     Parameters::register_parameter("WORLD_TEST-numberOfOutputs", 10,
@@ -42,6 +45,20 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   popFileColumns.push_back("score_VAR"); // specifies to also record the
                                          // variance (performed automatically
                                          // because _VAR)
+}
+
+std::vector<std::vector<std::pair<double,double>>> getNKTable(int N,int K){
+    std::vector<std::vector<std::pair<double,double>>> NKTable;
+    NKTable.clear();
+    NKTable.resize(N);
+    for(int n=0;n<N;n++){
+        NKTable[n].resize(1<<K);
+        for(int k=0;k<(1<<K);k++){
+            NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
+//            printf("NK %i %i %f\n",n,k,fitnessFunction(NKTable[n][k],1.0));
+        }
+    }
+    return NKTable;
 }
 
 void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
