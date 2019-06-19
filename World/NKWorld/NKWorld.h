@@ -30,8 +30,11 @@ public:
   static std::shared_ptr<ParameterLink<std::string>> groupNamePL;
   static std::shared_ptr<ParameterLink<std::string>> brainNamePL;
 
+  int N;
+  int K;
+
   NKWorld(std::shared_ptr<ParametersTable> PT_ = nullptr);
-  virtual  NKWorld() = default;
+  virtual ~NKWorld() = default;
 
   void evaluateSolo(std::shared_ptr<Organism> org, int analyze,
                             int visualize, int debug);

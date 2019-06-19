@@ -22,7 +22,7 @@
 std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
     Parameters::register_parameter("WORLD_NK-n", 4,
                                    "number of outputs (e.g. traits, loci)");
-std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
+std::shared_ptr<ParameterLink<int>> NKWorld::kPL =
     Parameters::register_parameter("WORLD_NK-k", 2,
                                    "range of values each number can take");
 std::shared_ptr<ParameterLink<bool>> NKWorld::treadmillPL =
@@ -45,6 +45,9 @@ std::shared_ptr<ParameterLink<std::string>> NKWorld::brainNamePL =
 NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
     : AbstractWorld(PT_) {
 
+  N = nPL->get(PT);
+  K = kPL->get(PT);
+
   // columns to be added to ave file
   popFileColumns.clear();
   popFileColumns.push_back("score");
@@ -53,7 +56,10 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
                                          // because _VAR)
 }
 
-std::vector<std::vector<std::pair<double,double>>> getNKTable(int N,int K){
+  // localize N and K parameters
+
+
+std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K) {
     std::vector<std::vector<std::pair<double,double>>> NKTable;
     NKTable.clear();
     NKTable.resize(N);
