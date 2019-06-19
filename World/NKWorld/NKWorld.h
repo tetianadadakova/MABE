@@ -21,8 +21,11 @@ class NKWorld : public AbstractWorld {
 public:
 
   // Parameters
-  static std::shared_ptr<ParameterLink<int>> numberOfOutputsPL;
+  static std::shared_ptr<ParameterLink<int>> nPL;
+  static std::shared_ptr<ParameterLink<int>> kPL;
   static std::shared_ptr<ParameterLink<int>> evaluationsPerGenerationPL;
+
+  static std::shared_ptr<ParameterLink<bool>> treadmillPL; 
 
   static std::shared_ptr<ParameterLink<std::string>> groupNamePL;
   static std::shared_ptr<ParameterLink<std::string>> brainNamePL;

@@ -19,9 +19,15 @@
 #include <vector>
 #include <map>
 
-std::shared_ptr<ParameterLink<int>> NKWorld::numberOfOutputsPL =
-    Parameters::register_parameter("WORLD_TEST-numberOfOutputs", 10,
-                                   "number of outputs in this world");
+std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
+    Parameters::register_parameter("WORLD_NK-n", 4,
+                                   "number of outputs (e.g. traits, loci)");
+std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
+    Parameters::register_parameter("WORLD_NK-k", 2,
+                                   "range of values each number can take");
+std::shared_ptr<ParameterLink<bool>> NKWorld::treadmillPL =
+    Parameters::register_parameter("WORLD_NK-treadmill", 0,
+                                   "whether landscape should treadmill over time. 0 = static landscape, 1 = treadmilling landscape");
 std::shared_ptr<ParameterLink<int>> NKWorld::evaluationsPerGenerationPL =
     Parameters::register_parameter("WORLD_TEST-evaluationsPerGeneration", 1,
                                    "Number of times to test each Genome per "
@@ -69,12 +75,6 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     brain->setInput(0, 1); // give the brain a constant 1 (for wire brain)
     brain->update();
     double score = 0.0;
-    for (int i = 0; i < brain->nrOutputValues; i++) {
-      if (modePL->get(PT) == 0)
-        score += Bit(brain->readOutput(i));
-      else
-        score += brain->readOutput(i);
-    }
     if (score < 0.0)
       score = 0.0;
     org->dataMap.append("score", score);
