@@ -47,6 +47,19 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
+  
+  // generate NK lookup table
+  // dimensions: N x 2^K
+  // each value is a randomly generated pair of doubles, each in [-1.0,1.0]
+  // represents weighting on the fitness fcn
+  NKTable.clear();
+  NKTable.resize(N);
+  for(int n=0;n<N;n++){
+      NKTable[n].resize(1<<K);
+      for(int k=0;k<(1<<K);k++){
+          NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
+      }
+  } 
 
   // columns to be added to ave file
   popFileColumns.clear();
