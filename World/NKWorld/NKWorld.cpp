@@ -16,6 +16,8 @@
 #include <vector>
 #include <map>
 
+#define PI 3.14159265
+
 std::shared_ptr<ParameterLink<int>> NKWorld::nPL =
     Parameters::register_parameter("WORLD_NK-n", 4,
                                    "number of outputs (e.g. traits, loci)");
@@ -45,8 +47,7 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
-  treadmill = treadmillPL->get(PT)
-  
+
   // columns to be added to ave file
   popFileColumns.clear();
   popFileColumns.push_back("score");
@@ -55,40 +56,24 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
                                          // because _VAR)
 }
 
-// generate NK lookup table
-// dimensions: N x 2^K
-// each value is a randomly generated pair of doubles, each in [-1.0,1.0]
-// represents weighting on the fitness fcn
-std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K) {
-    std::vector<std::vector<std::pair<double,double>>> NKTable;
-    NKTable.clear();
-    NKTable.resize(N);
-    for(int n=0;n<N;n++){
-        NKTable[n].resize(1<<K);
-        for(int k=0;k<(1<<K);k++){
-            NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
-        }
+// fitness function for organisms
+double NKWorld::fitnessFunction(std::pair<double,double> &value, double t){
+    if (treadmillPL->get(PT)) {
+      return ((sin(t*PI*value.first)*cos(t*PI*value.second))+1.0)/2.0;
+    } else {
+      return value.first*value.second;
     }
-    return NKTable;
 }
 
-// fitness function for organisms
-double fitnessFunction(std::pair<double,double> &value,double t){
-    if (NKWorld::treadmillPL->get(PT)):
-      return ((sin(t*PI*value.first)*cos(t*PI*value.second))+1.0)/2.0;
-    else:
-      return 
-}
 void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
                              int visualize, int debug) {
   auto brain = org->brains[brainNamePL->get(PT)];
   for (int r = 0; r < evaluationsPerGenerationPL->get(PT); r++) {
+    
     brain->resetBrain();
-    brain->setInput(0, 1); // give the brain a constant 1 (for wire brain)
     brain->update();
     double score = 0.0;
-    if (score < 0.0)
-      score = 0.0;
+
     org->dataMap.append("score", score);
     if (visualize)
       std::cout << "organism with ID " << org->ID << " scored " << score
