@@ -32,12 +32,18 @@ public:
 
   int N;
   int K;
+  bool treadmill;
 
   NKWorld(std::shared_ptr<ParametersTable> PT_ = nullptr);
   virtual ~NKWorld() = default;
 
+  // NK-specific functions
+  std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K);
+  double fitnessFunction(std::pair<double,double> &value,double t);
+
   void evaluateSolo(std::shared_ptr<Organism> org, int analyze,
                             int visualize, int debug);
+  
   virtual void evaluate(std::map<std::string, std::shared_ptr<Group>> &groups,
                         int analyze, int visualize, int debug) {
     int popSize = groups[groupNamePL->get(PT)]->population.size();

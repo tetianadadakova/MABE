@@ -45,7 +45,8 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
-
+  treadmill = treadmillPL->get(PT)
+  
   // columns to be added to ave file
   popFileColumns.clear();
   popFileColumns.push_back("score");
@@ -71,6 +72,13 @@ std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K) {
     return NKTable;
 }
 
+// fitness function for organisms
+double fitnessFunction(std::pair<double,double> &value,double t){
+    if (NKWorld::treadmillPL->get(PT)):
+      return ((sin(t*PI*value.first)*cos(t*PI*value.second))+1.0)/2.0;
+    else:
+      return 
+}
 void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
                              int visualize, int debug) {
   auto brain = org->brains[brainNamePL->get(PT)];
