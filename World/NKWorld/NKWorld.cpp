@@ -8,11 +8,8 @@
 //     to view the full license, visit:
 //         github.com/Hintzelab/MABE/wiki/License
 
-// Evaluates agents on how many '1's they can output. This is a purely fixed
-// task
-// that requires to reactivity to stimuli.
-// Each correct '1' confers 1.0 point to score, or the decimal output determined
-// by 'mode'.
+// Evaluates agents in an NK landscape
+// Landscape can be changing periodically (treadmilling) or static
 
 #include "NKWorld.h"
 #include "../../Utilities/Random.h"
@@ -45,6 +42,7 @@ std::shared_ptr<ParameterLink<std::string>> NKWorld::brainNamePL =
 NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
     : AbstractWorld(PT_) {
 
+  // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
 
@@ -56,9 +54,10 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
                                          // because _VAR)
 }
 
-  // localize N and K parameters
-
-
+// generate NK lookup table
+// dimensions: N x 2^K
+// each value is a randomly generated pair of doubles, each in [-1.0,1.0]
+// represents weighting on the fitness fcn
 std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K) {
     std::vector<std::vector<std::pair<double,double>>> NKTable;
     NKTable.clear();
@@ -67,7 +66,6 @@ std::vector<std::vector<std::pair<double,double>>> getNKTable(int N, int K) {
         NKTable[n].resize(1<<K);
         for(int k=0;k<(1<<K);k++){
             NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
-//            printf("NK %i %i %f\n",n,k,fitnessFunction(NKTable[n][k],1.0));
         }
     }
     return NKTable;
