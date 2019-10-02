@@ -69,13 +69,14 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
                                          // because _VAR)
 }
 
-// fitness function for organisms
-double NKWorld::fitnessFunction(std::pair<double,double> &value, double t){
-    if (treadmillPL->get(PT)) {
-      return ((sin(t*PI*value.first)*cos(t*PI*value.second))+1.0)/2.0;
-    } else {
-      return value.first*value.second;
+// create angular sin function for more even fitness distribution
+double NKWorld::triangleSin(double x) {
+    double Y = 0.0;
+    for (int i = 0; i<N; i++) {
+        double n = (2*i) + 1;
+        Y += pow(-1, (double)i)*pow(n, -2.0)*sin(n*x);
     }
+    return (0.25*PI)*Y;
 }
 
 void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
@@ -85,7 +86,26 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     
     brain->resetBrain();
     brain->update();
-    double score = 0.0;
+    
+    // TODO
+    double t = 0.01; // figure out how to plug this in correctly later
+
+    double W = 0.0;
+    for (int n=0;n<N;n++) {
+        int val = 0;
+        for (int k=0; k<K; k++) {
+            val = (val<<1) + brain->readOutput((n+k)%N); // convert k sites to integer
+        }
+        if (treadmillPL->get(PT)) {
+            double alpha = NKTable[n][val].first;   
+            double beta = NKTable[n][val].second;
+            double localValue = (1.0 + triangleSin((t*(beta+0.5))+(alpha*PI*2.0)))/2.0;
+            W += log(localValue);
+        } else {
+            W += log(NKTable[n][val].first);
+        }
+    }
+    double score = exp(W/(double)N);
 
     org->dataMap.append("score", score);
     if (visualize)

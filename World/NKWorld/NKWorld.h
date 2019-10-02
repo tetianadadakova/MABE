@@ -38,8 +38,7 @@ public:
   virtual ~NKWorld() = default;
 
   // NK-specific functions
-  double fitnessFunction(std::pair<double,double> &value,double t);
-
+  double triangleSin(double x);
 
   // evaluate functions
   void evaluateSolo(std::shared_ptr<Organism> org, int analyze,
