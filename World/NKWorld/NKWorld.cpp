@@ -95,7 +95,7 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     for (int n=0;n<N;n++) {
         int val = 0;
         for (int k=0; k<K; k++) {
-            val = (val<<1) + brain->readOutput((n+k)%N); // convert k sites to integer
+            val = (val<<1) + (brain->readOutput((n+k)%N) >= 0.0); // convert k sites to integer
         }
         if (treadmillPL->get(PT)) {
             double alpha = NKTable[n][val].first;   
