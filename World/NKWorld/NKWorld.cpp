@@ -31,17 +31,17 @@ std::shared_ptr<ParameterLink<double>> NKWorld::velocityPL =
     Parameters::register_parameter("WORLD_NK-velocity", 0.01,
                                    "If treadmilling, how fast should it treadmill? Smaller values = slower treadmill");
 std::shared_ptr<ParameterLink<int>> NKWorld::evaluationsPerGenerationPL =
-    Parameters::register_parameter("WORLD_TEST-evaluationsPerGeneration", 1,
+    Parameters::register_parameter("WORLD_NK-evaluationsPerGeneration", 1,
                                    "Number of times to test each Genome per "
                                    "generation (useful with non-deterministic "
                                    "brains)");
 std::shared_ptr<ParameterLink<std::string>> NKWorld::groupNamePL =
-    Parameters::register_parameter("WORLD_TEST_NAMES-groupNameSpace",
+    Parameters::register_parameter("WORLD_NK_NAMES-groupNameSpace",
                                    (std::string) "root::",
                                    "namespace of group to be evaluated");
 std::shared_ptr<ParameterLink<std::string>> NKWorld::brainNamePL =
     Parameters::register_parameter(
-        "WORLD_TEST_NAMES-brainNameSpace", (std::string) "root::",
+        "WORLD_NK_NAMES-brainNameSpace", (std::string) "root::",
         "namespace for parameters used to define brain");
 
 NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
@@ -61,10 +61,10 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   for(int n=0;n<N;n++){
       NKTable[n].resize(1<<K);
       for(int k=0;k<(1<<K);k++){
-          NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
+            NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
       }
   } 
-
+  
   // columns to be added to ave file
   popFileColumns.clear();
   popFileColumns.push_back("score");
@@ -90,7 +90,6 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     
     brain->resetBrain();
     brain->update();
-    
     double W = 0.0;
     for (int n=0;n<N;n++) {
         int val = 0;
