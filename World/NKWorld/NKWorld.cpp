@@ -26,7 +26,10 @@ std::shared_ptr<ParameterLink<int>> NKWorld::kPL =
                                    "range of values each number can take");
 std::shared_ptr<ParameterLink<bool>> NKWorld::treadmillPL =
     Parameters::register_parameter("WORLD_NK-treadmill", false,
-                                   "whether landscape should treadmill over time. 0 = static landscape, 1 = treadmilling landscape");
+                                   "whether landscape should treadmill over time. false = static landscape, true = treadmilling landscape");
+std::shared_ptr<ParameterLink<double>> NKWorld::velocityPL =
+    Parameters::register_parameter("WORLD_NK-velocity", 0.01,
+                                   "If treadmilling, how fast should it treadmill? Smaller values = slower treadmill");
 std::shared_ptr<ParameterLink<int>> NKWorld::evaluationsPerGenerationPL =
     Parameters::register_parameter("WORLD_TEST-evaluationsPerGeneration", 1,
                                    "Number of times to test each Genome per "
@@ -47,6 +50,7 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
+  t = velocityPL->get(PT);
   
   // generate NK lookup table
   // dimensions: N x 2^K
@@ -87,9 +91,6 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     brain->resetBrain();
     brain->update();
     
-    // TODO
-    double t = 0.01; // figure out how to plug this in correctly later
-
     double W = 0.0;
     for (int n=0;n<N;n++) {
         int val = 0;

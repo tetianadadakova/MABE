@@ -25,13 +25,16 @@ public:
   static std::shared_ptr<ParameterLink<int>> kPL;
   static std::shared_ptr<ParameterLink<int>> evaluationsPerGenerationPL;
 
-  static std::shared_ptr<ParameterLink<bool>> treadmillPL; 
+  static std::shared_ptr<ParameterLink<bool>> treadmillPL;
+  static std::shared_ptr<ParameterLink<double>> velocityPL; 
 
   static std::shared_ptr<ParameterLink<std::string>> groupNamePL;
   static std::shared_ptr<ParameterLink<std::string>> brainNamePL;
 
   int N;
   int K;
+  double t;
+
   std::vector<std::vector<std::pair<double,double>>> NKTable;
 
   NKWorld(std::shared_ptr<ParametersTable> PT_ = nullptr);
