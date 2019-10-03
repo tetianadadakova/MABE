@@ -61,7 +61,7 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   for(int n=0;n<N;n++){
       NKTable[n].resize(1<<K);
       for(int k=0;k<(1<<K);k++){
-            NKTable[n][k]= std::pair<double,double>(Random::getDouble(-1.0,1.0),Random::getDouble(-1.0,1.0));
+            NKTable[n][k]= std::pair<double,double>(Random::getDouble(0.0,1.0),Random::getDouble(0.0,1.0));
       }
   } 
   
@@ -106,7 +106,6 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
         }
     }
     double score = exp(W/(double)N);
-
     org->dataMap.append("score", score);
     if (visualize)
       std::cout << "organism with ID " << org->ID << " scored " << score
