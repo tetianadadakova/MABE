@@ -33,7 +33,6 @@ public:
 
   int N;
   int K;
-  double t;
 
   std::vector<std::vector<std::pair<double,double>>> NKTable;
 

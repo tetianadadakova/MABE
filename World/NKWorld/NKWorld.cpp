@@ -50,7 +50,6 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
   // localize N & K parameters
   N = nPL->get(PT);
   K = kPL->get(PT);
-  t = velocityPL->get(PT);
   
   // generate NK lookup table
   // dimensions: N x 2^K
@@ -86,6 +85,7 @@ double NKWorld::triangleSin(double x) {
 void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
                              int visualize, int debug) {
   auto brain = org->brains[brainNamePL->get(PT)];
+  double t = Global::update*(velocityPL->get(PT));
   for (int r = 0; r < evaluationsPerGenerationPL->get(PT); r++) {
     
     brain->resetBrain();
