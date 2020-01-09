@@ -9,3 +9,7 @@ objectFiles/
 
 # Ignore python's cache:
 __pycache__/
+
+# Ignore vscode project file:
+.vscode/
+
