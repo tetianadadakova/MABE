@@ -25,6 +25,8 @@ public:
   static std::shared_ptr<ParameterLink<int>> kPL;
   static std::shared_ptr<ParameterLink<int>> evaluationsPerGenerationPL;
 
+  static std::shared_ptr<ParameterLink<bool>> writeNKTablePL;
+
   static std::shared_ptr<ParameterLink<bool>> treadmillPL;
   static std::shared_ptr<ParameterLink<double>> velocityPL; 
 

@@ -30,6 +30,9 @@ std::shared_ptr<ParameterLink<int>> NKWorld::kPL =
 std::shared_ptr<ParameterLink<bool>> NKWorld::treadmillPL =
     Parameters::register_parameter("WORLD_NK-treadmill", false,
                                    "whether landscape should treadmill over time. 0 = static landscape, 1 = treadmilling landscape");
+std::shared_ptr<ParameterLink<bool>> NKWorld::writeNKTablePL =
+    Parameters::register_parameter("WORLD_NK-writeNKTable", true,
+                                   "do you want the NK table to be output for each replicate? 0 = no output, 1 = please output");
 std::shared_ptr<ParameterLink<double>> NKWorld::velocityPL =
     Parameters::register_parameter("WORLD_NK-velocity", 0.01,
                                    "If treadmilling, how fast should it treadmill? Smaller values = slower treadmill");
@@ -65,8 +68,25 @@ NKWorld::NKWorld(std::shared_ptr<ParametersTable> PT_)
       for(int k=0;k<(1<<K);k++){
             NKTable[n][k]= std::pair<double,double>(Random::getDouble(0.0,1.0),Random::getDouble(0.0,1.0));
       }
-  } 
-  
+  }
+
+  if (writeNKTablePL->get(PT)) {
+      std::ofstream NKTable_csv;
+      NKTable_csv.open("NKTable.csv");
+      for(int k=0;k<(1<<K);k++){
+            for(int n=0;n<N;n++){
+              NKTable_csv << NKTable[n][k].first;
+              // we don't want commas on the last one
+              if (n < N-1) {
+                  NKTable_csv << ",";
+              } else {
+                  NKTable_csv << "\n";
+              }
+          }
+      }
+    NKTable_csv.close();
+  }
+
   // columns to be added to ave file
   popFileColumns.clear();
   popFileColumns.push_back("score");
