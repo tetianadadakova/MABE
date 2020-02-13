@@ -18,6 +18,7 @@
 #include "../../Utilities/Random.h"
 #include <vector>
 #include <map>
+#include <iostream>
 
 #define PI 3.14159265
 
@@ -134,9 +135,13 @@ void NKWorld::evaluateSolo(std::shared_ptr<Organism> org, int analyze,
     double score = exp(W/(double)N);
 
     org->dataMap.append("score", score);
-    if (visualize)
-      std::cout << "organism with ID " << org->ID << " scored " << score
-                << std::endl;
+    if (visualize) {
+      std::string filename = "postscore_" + Global::initPopPL->get(PT) + ".csv";
+      std::ofstream fileout;
+      fileout.open(filename,std::ios::app);
+      fileout << org->ID << "," << score << "\n";
+      fileout.close();
+    }
   }
 }
 
