@@ -1,8 +1,12 @@
 % World
+  + WorkingTitle
   - Logic16
+  * Grid
+  + NumGuesser
   - BlockCatch
-  * Test
-  - Berry
+  + Test
+  - Temp
+  + Berry
 
 % Genome
   * Circular
@@ -13,18 +17,18 @@
   + LODwAP
 
 % Brain
-  - Wire
-  * CGP
-  - Markov
-  - LSTM
-  - BiLog
-  - ANN
-  - Human
-  - ConstantValues
+  + Wire
+  * Markov
+  + CGP
+  + LSTM
+  + BiLog
+  + ANN
+  + Human
+  + ConstantValues
 
 % Optimizer
   - Islands
   - Lexicase
-  + Roulette
   * Tournament
+  + Roulette
 

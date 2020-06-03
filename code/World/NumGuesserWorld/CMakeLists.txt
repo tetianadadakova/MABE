@@ -1,0 +1,6 @@
+option(enable_World_NumGuesser "Enable Module NumGuesserWorld" ON)
+if (enable_World_NumGuesser)
+  register_module(World NumGuesser)
+  target_sources(${EXE} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/NumGuesserWorld.cpp)
+  target_sources(${EXE} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/NumGuesserWorld.h)
+endif()
