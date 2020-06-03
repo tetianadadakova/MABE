@@ -8,3 +8,7 @@ work/
 
 # Ignore python's cache:
 __pycache__/
+
+#MacOS files
+code/World/.DS_Store
+
